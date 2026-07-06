@@ -43,6 +43,14 @@ function About() {
           40+ countries and power the daily commute of 2M+ listeners.
         </p>
 
+        <div className="mt-8 flex flex-wrap items-center gap-2">
+          {["Made in India", "Carbon-neutral shipping", "2-year warranty", "24×7 support"].map((t) => (
+            <span key={t} className="mono rounded-full border border-accent/30 bg-accent/5 px-3 py-1 text-[10px] uppercase text-accent">
+              {t}
+            </span>
+          ))}
+        </div>
+
         <dl className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
             ["2M+", "Listeners"],
@@ -50,8 +58,8 @@ function About() {
             ["150", "Products"],
             ["4.8★", "Avg. rating"],
           ].map(([k, v]) => (
-            <div key={v} className="rounded-2xl border border-border/60 bg-card p-5">
-              <dt className="font-display text-3xl font-bold text-accent">{k}</dt>
+            <div key={v} className="group rounded-2xl border border-border/60 bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-accent/50">
+              <dt className="font-display text-3xl font-bold text-accent transition-transform group-hover:scale-105">{k}</dt>
               <dd className="mono mt-1 text-[10px] uppercase text-muted-foreground">{v}</dd>
             </div>
           ))}
