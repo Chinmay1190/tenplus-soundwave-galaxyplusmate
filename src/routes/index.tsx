@@ -165,10 +165,9 @@ function Home() {
                 title={b}
               >
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/5 transition-transform group-hover:scale-110">
-                  <img
-                    src={brandLogo(b)}
+                  <BrandLogo
+                    brand={b}
                     alt=""
-                    loading="lazy"
                     className="h-full w-full object-contain"
                   />
                 </span>
