@@ -55,6 +55,23 @@ function Contact() {
           care replies within 4 hours, 9 AM – 9 PM IST.
         </p>
 
+        <div className="mt-6 flex flex-wrap gap-2">
+          {[
+            ["/track-order", "Track my order"],
+            ["/returns", "Start a return"],
+            ["/warranty", "Warranty claim"],
+            ["/faq", "Read the FAQ"],
+          ].map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              className="mono rounded-full border border-border bg-surface-2 px-3 py-1.5 text-[10px] uppercase text-muted-foreground transition-colors hover:border-accent/50 hover:text-accent"
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+
       <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_360px]">
         <form onSubmit={submit} className="space-y-4 rounded-3xl border border-border/60 bg-card p-6 sm:p-8">
           <div>
