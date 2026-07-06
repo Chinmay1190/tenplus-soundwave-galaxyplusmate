@@ -4,7 +4,7 @@ import type { Product } from "@/data/products";
 import { useStore } from "@/lib/store";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { brandLogo } from "@/lib/brand-logo";
+import { BrandLogo } from "@/components/site/BrandLogo";
 
 export function ProductCard({ product }: { product: Product }) {
   const { addToCart, toggleWishlist, toggleCompare, inWishlist, inCompare } = useStore();
