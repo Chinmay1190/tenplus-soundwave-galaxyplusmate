@@ -3,7 +3,7 @@ import { ArrowRight, ChevronDown, Headphones, Play, Shield, Sparkles, Truck, Zap
 import hero from "@/assets/hero-earbuds.jpg";
 import { PRODUCTS, CATEGORIES, BRANDS } from "@/data/products";
 import { ProductCard } from "@/components/site/ProductCard";
-import { brandLogo } from "@/lib/brand-logo";
+import { BrandLogo } from "@/components/site/BrandLogo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
