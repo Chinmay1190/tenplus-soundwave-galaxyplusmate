@@ -4,7 +4,7 @@ import type { Product } from "@/data/products";
 import { useStore } from "@/lib/store";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { brandLogo } from "@/lib/brand-logo";
+import { BrandLogo } from "@/components/site/BrandLogo";
 
 export function ProductCard({ product }: { product: Product }) {
   const { addToCart, toggleWishlist, toggleCompare, inWishlist, inCompare } = useStore();
@@ -93,12 +93,11 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5">
             <span className="grid h-5 w-5 place-items-center rounded-sm bg-white p-0.5">
-              <img
-                src={brandLogo(product.brand, 40)}
+              <BrandLogo
+                brand={product.brand}
                 alt={`${product.brand} logo`}
-                loading="lazy"
                 className="h-full w-full object-contain"
-                onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+                size={40}
               />
             </span>
             <span className="mono text-muted-foreground">{product.brand}</span>

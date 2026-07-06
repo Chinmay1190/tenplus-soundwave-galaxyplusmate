@@ -28,6 +28,12 @@ const OVERRIDES: Record<string, string> = {
   Huawei: "https://upload.wikimedia.org/wikipedia/commons/f/fb/Huawei_Standard_logo.svg",
   Skullcandy: "https://upload.wikimedia.org/wikipedia/commons/a/a1/Skullcandy_logo.svg",
   Jabra: "https://upload.wikimedia.org/wikipedia/commons/3/3c/Jabra_logo.svg",
+  Realme: "https://upload.wikimedia.org/wikipedia/commons/2/2e/Realme_logo.svg",
+  AKG: "https://upload.wikimedia.org/wikipedia/commons/8/8f/AKG_logo.svg",
+  Shure: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Shure_Logo.svg/1200px-Shure_Logo.svg.png",
+  Bang: "https://upload.wikimedia.org/wikipedia/commons/9/9e/Bang_%26_Olufsen_logo.svg",
+  "Bang & Olufsen": "https://upload.wikimedia.org/wikipedia/commons/9/9e/Bang_%26_Olufsen_logo.svg",
+  Boat: "https://upload.wikimedia.org/wikipedia/commons/8/8f/BoAt_Logo.png",
 };
 
 const DOMAINS: Record<string, string> = {
@@ -46,6 +52,7 @@ const SI_SLUGS: Record<string, string> = {
   OnePlus: "oneplus", Razer: "razer", Logitech: "logitech", HyperX: "hyperx",
   Xiaomi: "xiaomi", Huawei: "huawei", Google: "google", Marshall: "marshall",
   Shure: "shure", Jabra: "jabra", Skullcandy: "skullcandy",
+  Realme: "realme", Soundcore: "anker", Audeze: "audeze",
 };
 
 function letterAvatar(brand: string, tint = "#111"): string {

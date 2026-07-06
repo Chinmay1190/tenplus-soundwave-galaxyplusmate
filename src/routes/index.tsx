@@ -3,7 +3,7 @@ import { ArrowRight, ChevronDown, Headphones, Play, Shield, Sparkles, Truck, Zap
 import hero from "@/assets/hero-earbuds.jpg";
 import { PRODUCTS, CATEGORIES, BRANDS } from "@/data/products";
 import { ProductCard } from "@/components/site/ProductCard";
-import { brandLogo } from "@/lib/brand-logo";
+import { BrandLogo } from "@/components/site/BrandLogo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -165,10 +165,9 @@ function Home() {
                 title={b}
               >
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/5 transition-transform group-hover:scale-110">
-                  <img
-                    src={brandLogo(b)}
+                  <BrandLogo
+                    brand={b}
                     alt=""
-                    loading="lazy"
                     className="h-full w-full object-contain"
                   />
                 </span>
