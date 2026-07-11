@@ -633,20 +633,36 @@ function Checkout() {
 
           <div className="rounded-3xl border border-border/60 bg-surface-2 p-5">
             <div className="mono text-[10px] text-muted-foreground">— Why PULSE</div>
-            <ul className="mt-3 space-y-2 text-sm">
+            <ul className="mt-3 space-y-2.5 text-sm">
               {[
-                [ShieldCheck, "2-year warranty"],
-                [Truck, "Free shipping over ₹999"],
-                [Sparkles, "30-day no-questions returns"],
-              ].map(([Ico, t]) => {
+                [ShieldCheck, "2-year warranty", "On every product"],
+                [Truck, "Free shipping", "On orders over ₹999"],
+                [Sparkles, "30-day returns", "No questions asked"],
+                [Lock, "Secure payments", "PCI-DSS compliant"],
+              ].map(([Ico, t, d]) => {
                 const Icon = Ico as typeof ShieldCheck;
                 return (
-                  <li key={t as string} className="flex items-center gap-2 text-muted-foreground">
-                    <Icon className="h-4 w-4 text-accent" /> {t as string}
+                  <li key={t as string} className="flex items-start gap-3">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span>
+                      <div className="text-sm font-semibold text-foreground">{t as string}</div>
+                      <div className="mono text-[10px] text-muted-foreground">{d as string}</div>
+                    </span>
                   </li>
                 );
               })}
             </ul>
+            <div className="mt-4 flex items-center justify-center gap-3 border-t border-border/60 pt-3">
+              <span className="mono text-[9px] text-muted-foreground">VISA</span>
+              <span className="mono text-[9px] text-muted-foreground">•</span>
+              <span className="mono text-[9px] text-muted-foreground">MC</span>
+              <span className="mono text-[9px] text-muted-foreground">•</span>
+              <span className="mono text-[9px] text-muted-foreground">UPI</span>
+              <span className="mono text-[9px] text-muted-foreground">•</span>
+              <span className="mono text-[9px] text-muted-foreground">RUPAY</span>
+            </div>
           </div>
         </aside>
       </div>
