@@ -274,6 +274,31 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
   doc.setLineWidth(0.6);
   doc.line(M, 138, W - M, 138);
 
+  // ── EXECUTIVE SUMMARY ────────────────────────────────────
+  let esY = 152;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...accent);
+  doc.text("EXECUTIVE SUMMARY", M, esY);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...sub);
+  const bestCat = s.byCategory[0]?.name ?? "—";
+  const bestProd = s.topProducts[0]?.name ?? "—";
+  const peak = s.series.reduce(
+    (best, cur) => (cur.revenue > best.revenue ? cur : best),
+    { label: "—", revenue: 0, orders: 0 },
+  );
+  const summaryText =
+    `During ${s.rangeLabel.toLowerCase()}, PULSE recorded ${inr(s.totalRevenue)} in gross revenue ` +
+    `across ${s.totalOrders} order${s.totalOrders === 1 ? "" : "s"} and ${s.totalUnits} units. ` +
+    `The strongest category was "${bestCat}", led by "${bestProd}". ` +
+    `${s.returnCount > 0 ? `Returns landed at ${s.returnRate.toFixed(1)}% of orders.` : "No returns were recorded — a clean period."}`;
+  const wrapped = doc.splitTextToSize(summaryText, W - 2 * M);
+  wrapped.forEach((ln: string, i: number) => doc.text(ln, M, esY + 14 + i * 12));
+  esY += 14 + wrapped.length * 12;
+
+
   // ── KPI CARDS ────────────────────────────────────────────
   let y = 160;
   const cardW = (W - 2 * M - 24) / 4;
