@@ -18,6 +18,34 @@ export type InvoiceData = {
 const inr = (n: number) =>
   "Rs. " + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// Convert integer rupees to words (Indian numbering)
+function amountInWords(num: number): string {
+  const n = Math.round(num);
+  if (n === 0) return "Zero Rupees Only";
+  const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen"];
+  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const two = (x: number): string =>
+    x < 20 ? a[x] : b[Math.floor(x / 10)] + (x % 10 ? " " + a[x % 10] : "");
+  const three = (x: number): string => {
+    const h = Math.floor(x / 100);
+    const r = x % 100;
+    return (h ? a[h] + " Hundred" + (r ? " and " : "") : "") + (r ? two(r) : "");
+  };
+  let x = n;
+  const parts: string[] = [];
+  const crore = Math.floor(x / 10000000); x %= 10000000;
+  const lakh = Math.floor(x / 100000); x %= 100000;
+  const thousand = Math.floor(x / 1000); x %= 1000;
+  const rest = x;
+  if (crore) parts.push(three(crore) + " Crore");
+  if (lakh) parts.push(three(lakh) + " Lakh");
+  if (thousand) parts.push(three(thousand) + " Thousand");
+  if (rest) parts.push(three(rest));
+  return parts.join(" ") + " Rupees Only";
+}
+
 const ink: [number, number, number] = [17, 17, 19];
 const sub: [number, number, number] = [60, 60, 68];
 const muted: [number, number, number] = [120, 120, 128];
@@ -25,6 +53,7 @@ const hair: [number, number, number] = [225, 225, 230];
 const accent: [number, number, number] = [225, 29, 47];
 const accentDark: [number, number, number] = [170, 20, 36];
 const tint: [number, number, number] = [250, 250, 252];
+const success: [number, number, number] = [16, 128, 74];
 
 // Draws the PULSE waveform mark inside a rounded square.
 function drawLogoMark(
