@@ -274,8 +274,33 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
   doc.setLineWidth(0.6);
   doc.line(M, 138, W - M, 138);
 
+  // ── EXECUTIVE SUMMARY ────────────────────────────────────
+  let esY = 152;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...accent);
+  doc.text("EXECUTIVE SUMMARY", M, esY);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...sub);
+  const bestCat = s.byCategory[0]?.name ?? "—";
+  const bestProd = s.topProducts[0]?.name ?? "—";
+  const peak = s.series.reduce(
+    (best, cur) => (cur.revenue > best.revenue ? cur : best),
+    { label: "—", revenue: 0, orders: 0 },
+  );
+  const summaryText =
+    `During ${s.rangeLabel.toLowerCase()}, PULSE recorded ${inr(s.totalRevenue)} in gross revenue ` +
+    `across ${s.totalOrders} order${s.totalOrders === 1 ? "" : "s"} and ${s.totalUnits} units. ` +
+    `The strongest category was "${bestCat}", led by "${bestProd}". ` +
+    `${s.returnCount > 0 ? `Returns landed at ${s.returnRate.toFixed(1)}% of orders.` : "No returns were recorded — a clean period."}`;
+  const wrapped = doc.splitTextToSize(summaryText, W - 2 * M);
+  wrapped.forEach((ln: string, i: number) => doc.text(ln, M, esY + 14 + i * 12));
+  esY += 14 + wrapped.length * 12;
+
+
   // ── KPI CARDS ────────────────────────────────────────────
-  let y = 160;
+  let y = esY + 12;
   const cardW = (W - 2 * M - 24) / 4;
   const cards: [string, string, string][] = [
     ["REVENUE", inr(s.totalRevenue), `${s.totalOrders} orders`],
@@ -460,6 +485,70 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
       y += 20;
     });
   }
+
+  // ── KEY INSIGHTS & RECOMMENDATIONS ───────────────────────
+  if (y > H - 220) { doc.addPage(); y = M + 20; }
+  y += 20;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...ink);
+  doc.text("Key Insights & Recommendations", M, y);
+  y += 16;
+
+  const insights: string[] = [];
+  if (s.totalOrders > 0) {
+    insights.push(`Average order value stands at ${inr(s.avgOrder)} — a healthy benchmark for premium audio SKUs.`);
+  }
+  if (s.byCategory[0]) {
+    const share = (s.byCategory[0].revenue / Math.max(1, s.totalRevenue)) * 100;
+    insights.push(`"${s.byCategory[0].name}" drives ${share.toFixed(0)}% of revenue — consider deepening inventory here.`);
+  }
+  if (s.topProducts[0]) {
+    insights.push(`Top mover: "${s.topProducts[0].name}" at ${s.topProducts[0].units} units — bundle candidates.`);
+  }
+  if (peak.revenue > 0) {
+    insights.push(`Peak period was "${peak.label}" with ${inr(peak.revenue)}. Align promos to repeat that spike.`);
+  }
+  if (s.returnRate > 5) {
+    insights.push(`Return rate ${s.returnRate.toFixed(1)}% is above 5% — review packaging and product description accuracy.`);
+  } else if (s.returnCount === 0 && s.totalOrders > 0) {
+    insights.push(`Zero returns — customer satisfaction indicator is strong for this window.`);
+  }
+  if (insights.length === 0) {
+    insights.push("Not enough activity in this window to generate meaningful insights.");
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  insights.forEach((t) => {
+    doc.setTextColor(...accent);
+    doc.text("▸", M + 4, y);
+    doc.setTextColor(...sub);
+    const lines = doc.splitTextToSize(t, W - 2 * M - 16);
+    lines.forEach((ln: string, i: number) => doc.text(ln, M + 16, y + i * 11));
+    y += lines.length * 11 + 6;
+  });
+
+  // Confidential band
+  y += 6;
+  doc.setFillColor(...tint);
+  doc.rect(M, y, W - 2 * M, 26, "F");
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.8);
+  doc.line(M, y, M, y + 26);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...accent);
+  doc.text("CONFIDENTIAL", M + 12, y + 11);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...sub);
+  doc.text(
+    "This report is intended solely for the account holder. Do not redistribute without written consent.",
+    M + 12,
+    y + 22,
+  );
+
 
   // Footer on each page
   const total = doc.getNumberOfPages();

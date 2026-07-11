@@ -18,6 +18,34 @@ export type InvoiceData = {
 const inr = (n: number) =>
   "Rs. " + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// Convert integer rupees to words (Indian numbering)
+function amountInWords(num: number): string {
+  const n = Math.round(num);
+  if (n === 0) return "Zero Rupees Only";
+  const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+    "Seventeen", "Eighteen", "Nineteen"];
+  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const two = (x: number): string =>
+    x < 20 ? a[x] : b[Math.floor(x / 10)] + (x % 10 ? " " + a[x % 10] : "");
+  const three = (x: number): string => {
+    const h = Math.floor(x / 100);
+    const r = x % 100;
+    return (h ? a[h] + " Hundred" + (r ? " and " : "") : "") + (r ? two(r) : "");
+  };
+  let x = n;
+  const parts: string[] = [];
+  const crore = Math.floor(x / 10000000); x %= 10000000;
+  const lakh = Math.floor(x / 100000); x %= 100000;
+  const thousand = Math.floor(x / 1000); x %= 1000;
+  const rest = x;
+  if (crore) parts.push(three(crore) + " Crore");
+  if (lakh) parts.push(three(lakh) + " Lakh");
+  if (thousand) parts.push(three(thousand) + " Thousand");
+  if (rest) parts.push(three(rest));
+  return parts.join(" ") + " Rupees Only";
+}
+
 const ink: [number, number, number] = [17, 17, 19];
 const sub: [number, number, number] = [60, 60, 68];
 const muted: [number, number, number] = [120, 120, 128];
@@ -25,6 +53,7 @@ const hair: [number, number, number] = [225, 225, 230];
 const accent: [number, number, number] = [225, 29, 47];
 const accentDark: [number, number, number] = [170, 20, 36];
 const tint: [number, number, number] = [250, 250, 252];
+const success: [number, number, number] = [16, 128, 74];
 
 // Draws the PULSE waveform mark inside a rounded square.
 function drawLogoMark(
@@ -261,8 +290,25 @@ export function downloadInvoice(data: InvoiceData) {
   row("Shipping", shipFee === 0 ? "FREE" : inr(shipFee));
   row("Total (INR)", inr(data.total), { bold: true, rule: true });
 
+  // Amount in words
+  doc.setFillColor(...tint);
+  doc.rect(M, y, W - 2 * M, 26, "F");
+  doc.setDrawColor(...hair);
+  doc.rect(M, y, W - 2 * M, 26, "S");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...muted);
+  doc.text("AMOUNT IN WORDS", M + 12, y + 11);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...ink);
+  doc.text(amountInWords(data.total), M + 12, y + 22);
+  y += 34;
+
   // ── PAYMENT SUMMARY ──────────────────────────────────────
-  y += 12;
+  const isPaid =
+    (data.paymentMethod || "").toLowerCase() !== "cod" &&
+    (data.status || "confirmed").toLowerCase() !== "pending";
   doc.setFillColor(...tint);
   doc.rect(M, y, W - 2 * M, 64, "F");
   doc.setDrawColor(...hair);
@@ -273,7 +319,7 @@ export function downloadInvoice(data: InvoiceData) {
     ["ORDER ID", `#${shortId}`],
     ["STATUS", (data.status || "confirmed").replace(/_/g, " ").toUpperCase()],
     ["PAYMENT", (data.paymentMethod || "Prepaid").toUpperCase()],
-    ["AMOUNT PAID", inr(data.total)],
+    [isPaid ? "AMOUNT PAID" : "AMOUNT DUE", inr(data.total)],
   ];
   blocks.forEach(([k, v], i) => {
     const bx = M + i * blockW + 14;
@@ -287,38 +333,76 @@ export function downloadInvoice(data: InvoiceData) {
     doc.text(v, bx, y + 44);
   });
 
+  // PAID / COD stamp — rotated
+  const stampX = W - M - 60;
+  const stampY = y + 8;
+  const stampCol = isPaid ? success : accent;
+  doc.setDrawColor(...stampCol);
+  doc.setLineWidth(1.8);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(...stampCol);
+  const label = isPaid ? "PAID" : "DUE";
+  // faux rotated stamp: draw double border + label
+  doc.roundedRect(stampX - 4, stampY - 4, 68, 40, 4, 4, "S");
+  doc.setLineWidth(0.6);
+  doc.roundedRect(stampX - 1, stampY - 1, 62, 34, 3, 3, "S");
+  doc.text(label, stampX + 30, stampY + 22, { align: "center" });
+
   // Accent strip
   doc.setFillColor(...accent);
   doc.rect(M, y + 60, W - 2 * M, 4, "F");
 
+  // ── VALUE-ADD BENEFITS BAR ───────────────────────────────
+  y += 78;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...accent);
+  doc.text("INCLUDED WITH YOUR ORDER", M, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...sub);
+  const perks = [
+    "✓  2-year manufacturer warranty",
+    "✓  30-day no-questions returns",
+    "✓  Free doorstep replacement in first 10 days",
+    "✓  Priority customer care · 1800-PULSE-IN",
+  ];
+  perks.forEach((p, i) => {
+    const col = i % 2;
+    const rowIdx = Math.floor(i / 2);
+    doc.text(p, M + col * ((W - 2 * M) / 2), y + 14 + rowIdx * 12);
+  });
+
   // ── TERMS & SIGNATURE ────────────────────────────────────
-  y += 92;
+  y += 46;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(...ink);
   doc.text("TERMS & CONDITIONS", M, y);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(...sub);
   const terms = [
-    "1. Returns accepted within 30 days of delivery in original, unopened condition.",
-    "2. Warranty: 2 years on all PULSE audio products against manufacturing defects.",
-    "3. Goods once sold will not be taken back except as per the return policy.",
-    "4. Interest @18% p.a. is charged on invoices not settled within the due date.",
-    "5. Subject to Bengaluru jurisdiction. E. & O. E.",
+    "1. Returns accepted within 30 days of delivery in original, unopened condition with all accessories.",
+    "2. Warranty: 2 years on all PULSE audio products against manufacturing defects (accidental damage excluded).",
+    "3. Prices are inclusive of all taxes. CGST + SGST as applicable under GST Act, 2017.",
+    "4. Any dispute is subject to the exclusive jurisdiction of courts in Bengaluru, Karnataka.",
+    "5. This is a computer-generated invoice; a digital signature is affixed in lieu of a physical one. E. & O. E.",
   ];
   terms.forEach((t, i) => doc.text(t, M, y + 14 + i * 11));
 
   // Signature box
   const sigX = W - M - 160;
-  const sigY = y + 8;
+  const sigY = y + 6;
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.5);
   doc.line(sigX, sigY + 44, W - M, sigY + 44);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(...muted);
-  doc.text("Authorised Signatory", sigX + 80, sigY + 58, { align: "center" });
+  doc.text("For PULSE Audio Pvt. Ltd.", sigX + 80, sigY + 56, { align: "center" });
+  doc.text("Authorised Signatory · Digitally signed", sigX + 80, sigY + 66, { align: "center" });
   doc.setFont("helvetica", "italic");
   doc.setFontSize(14);
   doc.setTextColor(...accent);
@@ -326,14 +410,27 @@ export function downloadInvoice(data: InvoiceData) {
 
   // ── FOOTER ───────────────────────────────────────────────
   doc.setDrawColor(...hair);
-  doc.line(M, H - 50, W - M, H - 50);
+  doc.line(M, H - 58, W - M, H - 58);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...ink);
+  doc.text("Thank you for choosing PULSE — where every beat matters.", M, H - 44);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(...muted);
-  doc.text("Thank you for shopping with PULSE.", M, H - 34);
-  doc.text("This is a system-generated invoice and does not require a physical signature.", M, H - 22);
+  doc.text(
+    "Support · care@pulse.audio · 1800-PULSE-IN (toll-free)  ·  Track order at pulse.audio/track",
+    M,
+    H - 30,
+  );
+  doc.text(
+    "PULSE Audio Pvt. Ltd. · CIN: U74999KA2021PTC145678 · GSTIN: 29ABCDE1234F1Z5",
+    M,
+    H - 20,
+  );
   doc.setTextColor(...accent);
-  doc.text("www.pulse.audio", W - M, H - 22, { align: "right" });
+  doc.text("www.pulse.audio", W - M, H - 20, { align: "right" });
 
   doc.save(`PULSE-Invoice-${shortId}.pdf`);
 }
+

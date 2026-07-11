@@ -395,13 +395,21 @@ function KPI({
   sub: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-5">
-      <div className="flex items-center justify-between">
+    <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card to-surface-2 p-5 transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/10">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-0 blur-2xl transition-opacity group-hover:opacity-40"
+        style={{ background: "radial-gradient(circle, var(--color-accent), transparent 70%)" }}
+      />
+      <div className="relative flex items-center justify-between">
         <span className="mono text-[10px] text-muted-foreground">{label}</span>
-        <Icon className="h-4 w-4 text-accent" />
+        <span className="grid h-8 w-8 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent">
+          <Icon className="h-4 w-4" />
+        </span>
       </div>
-      <div className="mt-3 font-display text-2xl font-bold tracking-tight">{value}</div>
-      <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>
+      <div className="relative mt-3 font-display text-2xl font-bold tracking-tight">{value}</div>
+      <div className="relative mt-0.5 text-xs text-muted-foreground">{sub}</div>
+      <div className="relative mt-3 h-0.5 w-8 rounded-full bg-gradient-to-r from-accent to-transparent" />
     </div>
   );
 }
