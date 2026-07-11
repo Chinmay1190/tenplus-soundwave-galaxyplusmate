@@ -115,6 +115,21 @@ function Account() {
               <div className="mt-1 inline-flex items-center gap-2 text-sm text-muted-foreground">
                 <Mail className="h-3.5 w-3.5" /> {user?.email}
               </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="mono inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-[10px] text-accent">
+                  <Sparkles className="h-3 w-3" /> PULSE+ Member
+                </span>
+                {user?.created_at && (
+                  <span className="mono inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-1 text-[10px] text-muted-foreground">
+                    Since {new Date(user.created_at).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+                  </span>
+                )}
+                {user?.email_confirmed_at && (
+                  <span className="mono inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-400">
+                    ✓ Verified
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
