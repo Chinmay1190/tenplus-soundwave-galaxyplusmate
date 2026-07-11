@@ -300,7 +300,7 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
 
 
   // ── KPI CARDS ────────────────────────────────────────────
-  let y = 160;
+  let y = esY + 12;
   const cardW = (W - 2 * M - 24) / 4;
   const cards: [string, string, string][] = [
     ["REVENUE", inr(s.totalRevenue), `${s.totalOrders} orders`],
