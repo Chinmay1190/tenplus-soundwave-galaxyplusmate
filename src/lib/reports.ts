@@ -486,6 +486,70 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
     });
   }
 
+  // ── KEY INSIGHTS & RECOMMENDATIONS ───────────────────────
+  if (y > H - 220) { doc.addPage(); y = M + 20; }
+  y += 20;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(...ink);
+  doc.text("Key Insights & Recommendations", M, y);
+  y += 16;
+
+  const insights: string[] = [];
+  if (s.totalOrders > 0) {
+    insights.push(`Average order value stands at ${inr(s.avgOrder)} — a healthy benchmark for premium audio SKUs.`);
+  }
+  if (s.byCategory[0]) {
+    const share = (s.byCategory[0].revenue / Math.max(1, s.totalRevenue)) * 100;
+    insights.push(`"${s.byCategory[0].name}" drives ${share.toFixed(0)}% of revenue — consider deepening inventory here.`);
+  }
+  if (s.topProducts[0]) {
+    insights.push(`Top mover: "${s.topProducts[0].name}" at ${s.topProducts[0].units} units — bundle candidates.`);
+  }
+  if (peak.revenue > 0) {
+    insights.push(`Peak period was "${peak.label}" with ${inr(peak.revenue)}. Align promos to repeat that spike.`);
+  }
+  if (s.returnRate > 5) {
+    insights.push(`Return rate ${s.returnRate.toFixed(1)}% is above 5% — review packaging and product description accuracy.`);
+  } else if (s.returnCount === 0 && s.totalOrders > 0) {
+    insights.push(`Zero returns — customer satisfaction indicator is strong for this window.`);
+  }
+  if (insights.length === 0) {
+    insights.push("Not enough activity in this window to generate meaningful insights.");
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  insights.forEach((t) => {
+    doc.setTextColor(...accent);
+    doc.text("▸", M + 4, y);
+    doc.setTextColor(...sub);
+    const lines = doc.splitTextToSize(t, W - 2 * M - 16);
+    lines.forEach((ln: string, i: number) => doc.text(ln, M + 16, y + i * 11));
+    y += lines.length * 11 + 6;
+  });
+
+  // Confidential band
+  y += 6;
+  doc.setFillColor(...tint);
+  doc.rect(M, y, W - 2 * M, 26, "F");
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.8);
+  doc.line(M, y, M, y + 26);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...accent);
+  doc.text("CONFIDENTIAL", M + 12, y + 11);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...sub);
+  doc.text(
+    "This report is intended solely for the account holder. Do not redistribute without written consent.",
+    M + 12,
+    y + 22,
+  );
+
+
   // Footer on each page
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
