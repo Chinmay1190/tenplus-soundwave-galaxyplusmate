@@ -216,31 +216,6 @@ function TrackOrderPage() {
       </section>
 
       {/* Result */}
-      {order && (
-        <section className="mx-auto max-w-4xl px-4 pb-16 sm:px-6">
-          <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="mono flex items-center gap-2 text-[10px] text-muted-foreground">
-                  <span>
-                    ORDER #{order.id.slice(0, 8).toUpperCase()} ·{" "}
-                    {new Date(order.created_at).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(order.id);
-                      toast.success("Order ID copied");
-                    }}
-                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] hover:border-accent hover:text-accent"
-                    aria-label="Copy full order ID"
-                  >
-                    <Copy className="h-3 w-3" /> Copy
-      {/* Result */}
       {order && (() => {
         const flow = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered"];
         const idx = Math.max(0, flow.indexOf(order.status));
