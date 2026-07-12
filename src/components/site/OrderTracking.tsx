@@ -51,26 +51,34 @@ function Stage({ s, vertical }: { s: TrackingStage; vertical: boolean }) {
   return (
     <li className={vertical ? "flex items-start gap-3" : "flex flex-col items-center text-center"}>
       <span
-        className={`relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] font-bold ${
+        className={`relative z-10 grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] font-bold transition ${
           s.reached
-            ? "border-accent bg-accent text-accent-foreground"
+            ? "border-accent bg-accent text-accent-foreground shadow-[0_0_0_4px_oklch(0.65_0.24_25/0.15)]"
             : s.active
-            ? "border-accent bg-background text-accent"
+            ? "border-accent bg-background text-accent animate-pulse shadow-[0_0_0_4px_oklch(0.65_0.24_25/0.2)]"
             : "border-border bg-background text-muted-foreground"
         }`}
       >
         {s.reached ? <Check className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
       </span>
-      <div className={vertical ? "" : "mt-2 max-w-[110px]"}>
+      <div className={vertical ? "flex-1" : "mt-2 max-w-[130px]"}>
         <div className={`text-sm font-semibold ${s.reached || s.active ? "text-foreground" : "text-muted-foreground"}`}>
           {s.label}
+          {s.active && (
+            <span className="mono ml-1.5 rounded-full bg-accent/15 px-1.5 py-0.5 text-[9px] text-accent">NOW</span>
+          )}
         </div>
         <div className="mono mt-0.5 text-[10px] text-muted-foreground">
-          {s.at ? s.at.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}
+          {s.at
+            ? s.at.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) +
+              (s.reached
+                ? " · " + s.at.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })
+                : "")
+            : "—"}
         </div>
-        {!vertical && (
-          <div className="mt-0.5 text-[11px] text-muted-foreground">{s.description}</div>
-        )}
+        <div className={`mt-0.5 text-[11px] text-muted-foreground ${vertical ? "" : "hidden sm:block"}`}>
+          {s.description}
+        </div>
       </div>
     </li>
   );
