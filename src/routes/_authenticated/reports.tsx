@@ -389,12 +389,17 @@ function KPI({
   label,
   value,
   sub,
+  spark,
+  tone,
 }: {
   icon: typeof TrendingUp;
   label: string;
   value: string;
   sub: string;
+  spark?: number[];
+  tone?: "ok" | "warn";
 }) {
+  const max = spark && spark.length ? Math.max(...spark, 1) : 1;
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card to-surface-2 p-5 transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg hover:shadow-accent/10">
       <div
@@ -404,16 +409,35 @@ function KPI({
       />
       <div className="relative flex items-center justify-between">
         <span className="mono text-[10px] text-muted-foreground">{label}</span>
-        <span className="grid h-8 w-8 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent">
+        <span
+          className={`grid h-8 w-8 place-items-center rounded-full border ${
+            tone === "warn"
+              ? "border-destructive/40 bg-destructive/10 text-destructive"
+              : "border-accent/30 bg-accent/10 text-accent"
+          }`}
+        >
           <Icon className="h-4 w-4" />
         </span>
       </div>
       <div className="relative mt-3 font-display text-2xl font-bold tracking-tight">{value}</div>
       <div className="relative mt-0.5 text-xs text-muted-foreground">{sub}</div>
-      <div className="relative mt-3 h-0.5 w-8 rounded-full bg-gradient-to-r from-accent to-transparent" />
+      {spark && spark.length > 1 ? (
+        <div className="relative mt-3 flex h-6 items-end gap-0.5">
+          {spark.slice(-16).map((v, i) => (
+            <span
+              key={i}
+              className="flex-1 rounded-sm bg-accent/60"
+              style={{ height: `${Math.max(6, (v / max) * 100)}%` }}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="relative mt-3 h-0.5 w-8 rounded-full bg-gradient-to-r from-accent to-transparent" />
+      )}
     </div>
   );
 }
+
 
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
