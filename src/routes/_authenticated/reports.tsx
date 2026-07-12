@@ -227,11 +227,12 @@ function ReportsPage() {
 
       {/* KPIs */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KPI icon={TrendingUp} label="Revenue" value={inr(summary.totalRevenue)} sub={`${summary.totalOrders} orders`} />
-        <KPI icon={ShoppingBag} label="Avg Order" value={inr(summary.avgOrder)} sub={`${summary.totalUnits} units`} />
-        <KPI icon={RotateCcw} label="Returns" value={String(summary.returnCount)} sub={`${summary.returnRate.toFixed(1)}% rate`} />
+        <KPI icon={TrendingUp} label="Revenue" value={inr(summary.totalRevenue)} sub={`${summary.totalOrders} orders`} spark={summary.series.map((d) => d.revenue)} />
+        <KPI icon={ShoppingBag} label="Avg Order" value={inr(summary.avgOrder)} sub={`${summary.totalUnits} units`} spark={summary.series.map((d) => d.orders)} />
+        <KPI icon={RotateCcw} label="Returns" value={String(summary.returnCount)} sub={`${summary.returnRate.toFixed(1)}% rate`} tone={summary.returnRate > 5 ? "warn" : "ok"} />
         <KPI icon={FileBarChart2} label="Refund Est." value={inr(summary.refundEstimate)} sub="lifetime value at risk" />
       </div>
+
 
       {/* Trend */}
       <Section title="Revenue trend" subtitle={`Grouped by ${gran}`}>
