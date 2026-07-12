@@ -60,6 +60,26 @@ function TrackOrderPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("pulse:recent-tracking");
+      if (raw) setRecent(JSON.parse(raw));
+    } catch { /* ignore */ }
+    const params = new URLSearchParams(window.location.search);
+    const qid = params.get("id");
+    if (qid) setOrderId(qid);
+  }, []);
+
+  const remember = (id: string) => {
+    setRecent((prev) => {
+      const next = [id, ...prev.filter((r) => r !== id)].slice(0, 4);
+      try { localStorage.setItem("pulse:recent-tracking", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
 
   const lookup = async (e: React.FormEvent) => {
     e.preventDefault();
