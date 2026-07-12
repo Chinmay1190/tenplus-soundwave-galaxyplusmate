@@ -325,12 +325,19 @@ export function downloadInvoice(data: InvoiceData) {
   doc.text(amountInWords(data.total), M + 12, y + 22);
   y += 34;
 
+  // Page-break guard before payment summary block
+  if (y + 220 > H - 60) {
+    doc.addPage();
+    y = M + 20;
+  }
+
   // ── PAYMENT SUMMARY ──────────────────────────────────────
   const isPaid =
     (data.paymentMethod || "").toLowerCase() !== "cod" &&
     (data.status || "confirmed").toLowerCase() !== "pending";
   doc.setFillColor(...tint);
   doc.rect(M, y, W - 2 * M, 64, "F");
+
   doc.setDrawColor(...hair);
   doc.rect(M, y, W - 2 * M, 64, "S");
 
