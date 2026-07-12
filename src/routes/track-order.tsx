@@ -181,6 +181,32 @@ function TrackOrderPage() {
             </button>
           </form>
 
+          {recent.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="mono text-[10px] text-muted-foreground">RECENT —</span>
+              {recent.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setOrderId(id)}
+                  className="mono rounded-full border border-border bg-surface-2 px-2.5 py-1 text-[10px] hover:border-accent hover:text-accent"
+                >
+                  #{id.slice(0, 8).toUpperCase()}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setRecent([]);
+                  try { localStorage.removeItem("pulse:recent-tracking"); } catch { /* ignore */ }
+                }}
+                className="mono text-[10px] text-muted-foreground hover:text-accent"
+              >
+                clear
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
