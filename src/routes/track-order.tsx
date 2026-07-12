@@ -1,10 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Copy } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Copy,
+  PlayCircle,
+  Download,
+  MapPin,
+  Package,
+  Search,
+  Sparkles,
+  Truck,
+  Share2,
+  ShieldCheck,
+  Phone,
+  Mail,
+  RotateCcw,
+  HelpCircle,
+} from "lucide-react";
 import { estimateDelivery, formatEtaRange } from "@/lib/delivery";
-
-import { PlayCircle } from "lucide-react";
-import { Download, MapPin, Package, Search, Sparkles, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { OrderTracking } from "@/components/site/OrderTracking";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +60,26 @@ function TrackOrderPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("pulse:recent-tracking");
+      if (raw) setRecent(JSON.parse(raw));
+    } catch { /* ignore */ }
+    const params = new URLSearchParams(window.location.search);
+    const qid = params.get("id");
+    if (qid) setOrderId(qid);
+  }, []);
+
+  const remember = (id: string) => {
+    setRecent((prev) => {
+      const next = [id, ...prev.filter((r) => r !== id)].slice(0, 4);
+      try { localStorage.setItem("pulse:recent-tracking", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
 
   const lookup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +111,7 @@ function TrackOrderPage() {
         );
       } else {
         setOrder(data as unknown as Order);
+        remember((data as { id: string }).id);
       }
     } catch {
       setError(
@@ -148,6 +181,32 @@ function TrackOrderPage() {
             </button>
           </form>
 
+          {recent.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="mono text-[10px] text-muted-foreground">RECENT —</span>
+              {recent.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setOrderId(id)}
+                  className="mono rounded-full border border-border bg-surface-2 px-2.5 py-1 text-[10px] hover:border-accent hover:text-accent"
+                >
+                  #{id.slice(0, 8).toUpperCase()}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setRecent([]);
+                  try { localStorage.removeItem("pulse:recent-tracking"); } catch { /* ignore */ }
+                }}
+                className="mono text-[10px] text-muted-foreground hover:text-accent"
+              >
+                clear
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="mt-6 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
@@ -157,12 +216,20 @@ function TrackOrderPage() {
       </section>
 
       {/* Result */}
-      {order && (
+      {order && (() => {
+        const flow = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered"];
+        const idx = Math.max(0, flow.indexOf(order.status));
+        const pct = Math.round((idx / (flow.length - 1)) * 100);
+        const awb = "PULS" + order.id.replace(/-/g, "").slice(0, 10).toUpperCase();
+        const courier = ["BlueDart Surface", "Delhivery Express", "DTDC Prime", "Ekart Air"][
+          parseInt(order.id.replace(/\D/g, "").slice(0, 2) || "0", 10) % 4
+        ];
+        return (
         <section className="mx-auto max-w-4xl px-4 pb-16 sm:px-6">
           <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="mono flex items-center gap-2 text-[10px] text-muted-foreground">
+              <div className="min-w-0">
+                <div className="mono flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                   <span>
                     ORDER #{order.id.slice(0, 8).toUpperCase()} ·{" "}
                     {new Date(order.created_at).toLocaleDateString("en-IN", {
@@ -182,6 +249,23 @@ function TrackOrderPage() {
                   >
                     <Copy className="h-3 w-3" /> Copy
                   </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const url = `${window.location.origin}/track-order?id=${encodeURIComponent(order.id)}`;
+                      try {
+                        if (navigator.share) {
+                          await navigator.share({ title: "Track my PULSE order", url });
+                        } else {
+                          await navigator.clipboard.writeText(url);
+                          toast.success("Tracking link copied");
+                        }
+                      } catch { /* ignore */ }
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] hover:border-accent hover:text-accent"
+                  >
+                    <Share2 className="h-3 w-3" /> Share
+                  </button>
                 </div>
                 <div className="mt-1 font-display text-3xl font-bold tracking-tight">
                   {inr(Number(order.total))}
@@ -189,15 +273,35 @@ function TrackOrderPage() {
                 <div className="mt-2 text-sm text-muted-foreground">
                   {order.items.map((i) => `${i.name} × ${i.qty}`).join(" · ")}
                 </div>
-                {order.shipping_address?.pincode && (() => {
-                  const eta = estimateDelivery(order.shipping_address.pincode);
-                  if (!eta.serviceable || order.status === "delivered") return null;
-                  return (
-                    <div className="mono mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[10px] text-accent">
-                      <Truck className="h-3 w-3" /> ETA {formatEtaRange(eta, new Date(order.created_at))} · {eta.zone}
-                    </div>
-                  );
-                })()}
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <div className="mono inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-[10px]">
+                    <Truck className="h-3 w-3 text-accent" /> {courier}
+                  </div>
+                  <div className="mono inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-[10px]">
+                    AWB <span className="text-foreground">{awb}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(awb);
+                        toast.success("AWB copied");
+                      }}
+                      className="text-muted-foreground hover:text-accent"
+                      aria-label="Copy AWB"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  </div>
+                  {order.shipping_address?.pincode && (() => {
+                    const eta = estimateDelivery(order.shipping_address.pincode);
+                    if (!eta.serviceable || order.status === "delivered") return null;
+                    return (
+                      <div className="mono inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[10px] text-accent">
+                        <Truck className="h-3 w-3" /> ETA {formatEtaRange(eta, new Date(order.created_at))} · {eta.zone}
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 {order.shipping_address?.city && (
                   <div className="mono mt-3 inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
@@ -211,15 +315,11 @@ function TrackOrderPage() {
                   {order.status.replace(/_/g, " ")}
                 </span>
                 {(() => {
-                  const flow = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered"];
-                  const idx = flow.indexOf(order.status);
                   const next = idx >= 0 && idx < flow.length - 1 ? flow[idx + 1] : null;
                   if (!next) return null;
                   return (
                     <button
                       onClick={async () => {
-                        // Guard: user must be the owner (RLS enforces, but we
-                        // check up-front to give a clearer message).
                         const { data: sess } = await supabase.auth.getSession();
                         if (!sess.session) {
                           return toast.error("Please sign in to advance the tracker.");
@@ -274,6 +374,20 @@ function TrackOrderPage() {
               </div>
             </div>
 
+            {/* Progress meter */}
+            <div className="mt-6">
+              <div className="mono mb-2 flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>PROGRESS</span>
+                <span className="text-foreground">{pct}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-border/60">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-accent/70 to-accent transition-all duration-700"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+
             <div className="mt-8 border-t border-border/60 pt-8">
               <OrderTracking
                 createdAt={order.created_at}
@@ -281,11 +395,29 @@ function TrackOrderPage() {
                 pincode={order.shipping_address?.pincode}
               />
             </div>
+
+            {/* Quick help */}
+            <div className="mt-8 flex flex-wrap gap-2 border-t border-border/60 pt-6">
+              <Link to="/returns" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs hover:border-accent hover:text-accent">
+                <RotateCcw className="h-3 w-3" /> Start a return
+              </Link>
+              <Link to="/contact" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs hover:border-accent hover:text-accent">
+                <Mail className="h-3 w-3" /> Email support
+              </Link>
+              <a href="tel:+911800123456" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs hover:border-accent hover:text-accent">
+                <Phone className="h-3 w-3" /> Call care
+              </a>
+              <Link to="/faq" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs hover:border-accent hover:text-accent">
+                <HelpCircle className="h-3 w-3" /> FAQ
+              </Link>
+              <div className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <ShieldCheck className="h-3 w-3 text-accent" /> Buyer-protected checkout
+              </div>
+            </div>
           </div>
         </section>
-      )}
-
-      {/* How it works */}
+        );
+      })()}
       {!order && !error && (
         <section className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
           <div className="mono text-accent">— How tracking works</div>
