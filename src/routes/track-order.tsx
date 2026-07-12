@@ -111,6 +111,7 @@ function TrackOrderPage() {
         );
       } else {
         setOrder(data as unknown as Order);
+        remember((data as { id: string }).id);
       }
     } catch {
       setError(
