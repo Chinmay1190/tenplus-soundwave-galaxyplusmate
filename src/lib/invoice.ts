@@ -403,6 +403,11 @@ export function downloadInvoice(data: InvoiceData) {
 
   // ── TERMS & SIGNATURE ────────────────────────────────────
   y += 46;
+  if (y + 120 > H - 60) {
+    doc.addPage();
+    y = M + 20;
+  }
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(...ink);
