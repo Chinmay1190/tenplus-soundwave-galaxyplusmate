@@ -242,12 +242,31 @@ export function downloadInvoice(data: InvoiceData) {
     const unit = it.price ?? subtotal / Math.max(1, data.items.reduce((a, b) => a + b.qty, 0));
     const amt = unit * it.qty;
 
+    const nameLines = doc.splitTextToSize(it.name, 260) as string[];
+    const rowH = Math.max(24, 14 + nameLines.length * 12);
+
+    // Page-break guard so long orders don't crash into the footer/totals
+    if (y + rowH > H - 320) {
+      doc.addPage();
+      y = M + 20;
+      doc.setFillColor(...ink);
+      doc.rect(tableX, y - 20, tableW, 26, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.text("DESCRIPTION (contd.)", tableX + 12, y - 3);
+      doc.text("AMOUNT", colAmt - 12, y - 3, { align: "right" });
+      y += 16;
+    }
+
     if (idx % 2 === 1) {
       doc.setFillColor(...tint);
-      doc.rect(tableX, y - 14, tableW, 24, "F");
+      doc.rect(tableX, y - 14, tableW, rowH, "F");
     }
     doc.setTextColor(...ink);
-    doc.text(doc.splitTextToSize(it.name, 260)[0], tableX + 12, y);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    nameLines.forEach((ln, li) => doc.text(ln, tableX + 12, y + li * 12));
     doc.setTextColor(...sub);
     doc.setFontSize(9);
     doc.text("8518", colHsn, y);
@@ -256,13 +275,14 @@ export function downloadInvoice(data: InvoiceData) {
     doc.setTextColor(...ink);
     doc.setFontSize(10);
     doc.text(inr(amt), colAmt - 12, y, { align: "right" });
-    y += 24;
+    y += rowH;
   });
 
   // hairline under last row
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.5);
   doc.line(tableX, y - 8, tableX + tableW, y - 8);
+
 
   // ── TOTALS ───────────────────────────────────────────────
   y += 14;
@@ -305,12 +325,19 @@ export function downloadInvoice(data: InvoiceData) {
   doc.text(amountInWords(data.total), M + 12, y + 22);
   y += 34;
 
+  // Page-break guard before payment summary block
+  if (y + 220 > H - 60) {
+    doc.addPage();
+    y = M + 20;
+  }
+
   // ── PAYMENT SUMMARY ──────────────────────────────────────
   const isPaid =
     (data.paymentMethod || "").toLowerCase() !== "cod" &&
     (data.status || "confirmed").toLowerCase() !== "pending";
   doc.setFillColor(...tint);
   doc.rect(M, y, W - 2 * M, 64, "F");
+
   doc.setDrawColor(...hair);
   doc.rect(M, y, W - 2 * M, 64, "S");
 
@@ -376,6 +403,11 @@ export function downloadInvoice(data: InvoiceData) {
 
   // ── TERMS & SIGNATURE ────────────────────────────────────
   y += 46;
+  if (y + 120 > H - 60) {
+    doc.addPage();
+    y = M + 20;
+  }
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(...ink);

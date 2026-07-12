@@ -1,5 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { Copy } from "lucide-react";
+import { estimateDelivery, formatEtaRange } from "@/lib/delivery";
+
 import { PlayCircle } from "lucide-react";
 import { Download, MapPin, Package, Search, Sparkles, Truck } from "lucide-react";
 import { toast } from "sonner";
@@ -159,13 +162,26 @@ function TrackOrderPage() {
           <div className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="mono text-[10px] text-muted-foreground">
-                  ORDER #{order.id.slice(0, 8).toUpperCase()} ·{" "}
-                  {new Date(order.created_at).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                <div className="mono flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <span>
+                    ORDER #{order.id.slice(0, 8).toUpperCase()} ·{" "}
+                    {new Date(order.created_at).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(order.id);
+                      toast.success("Order ID copied");
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] hover:border-accent hover:text-accent"
+                    aria-label="Copy full order ID"
+                  >
+                    <Copy className="h-3 w-3" /> Copy
+                  </button>
                 </div>
                 <div className="mt-1 font-display text-3xl font-bold tracking-tight">
                   {inr(Number(order.total))}
@@ -173,6 +189,16 @@ function TrackOrderPage() {
                 <div className="mt-2 text-sm text-muted-foreground">
                   {order.items.map((i) => `${i.name} × ${i.qty}`).join(" · ")}
                 </div>
+                {order.shipping_address?.pincode && (() => {
+                  const eta = estimateDelivery(order.shipping_address.pincode);
+                  if (!eta.serviceable || order.status === "delivered") return null;
+                  return (
+                    <div className="mono mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[10px] text-accent">
+                      <Truck className="h-3 w-3" /> ETA {formatEtaRange(eta, new Date(order.created_at))} · {eta.zone}
+                    </div>
+                  );
+                })()}
+
                 {order.shipping_address?.city && (
                   <div className="mono mt-3 inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
                     <MapPin className="h-3 w-3" /> {order.shipping_address.city},{" "}
