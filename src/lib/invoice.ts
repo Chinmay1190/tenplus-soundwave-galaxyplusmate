@@ -440,28 +440,46 @@ export function downloadInvoice(data: InvoiceData) {
   doc.setTextColor(...accent);
   doc.text("PULSE", sigX + 80, sigY + 38, { align: "center" });
 
-  // ── FOOTER ───────────────────────────────────────────────
-  doc.setDrawColor(...hair);
-  doc.line(M, H - 58, W - M, H - 58);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(...ink);
-  doc.text("Thank you for choosing PULSE — where every beat matters.", M, H - 44);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...muted);
-  doc.text(
-    "Support · care@pulse.audio · 1800-PULSE-IN (toll-free)  ·  Track order at pulse.audio/track",
-    M,
-    H - 30,
-  );
-  doc.text(
-    "PULSE Audio Pvt. Ltd. · CIN: U74999KA2021PTC145678 · GSTIN: 29ABCDE1234F1Z5",
-    M,
-    H - 20,
-  );
-  doc.setTextColor(...accent);
-  doc.text("www.pulse.audio", W - M, H - 20, { align: "right" });
+  // ── FOOTER (with page numbers + watermark) ───────────────
+  const pageCount = doc.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+
+    // Diagonal watermark
+    doc.saveGraphicsState?.();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(90);
+    const GS = (doc as unknown as { GState?: new (o: { opacity: number }) => unknown; setGState?: (s: unknown) => void });
+    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 0.04 }));
+    doc.setTextColor(...ink);
+    doc.text("PULSE", W / 2, H / 2, { align: "center", angle: -28 });
+    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 1 }));
+    doc.restoreGraphicsState?.();
+
+    doc.setDrawColor(...hair);
+    doc.line(M, H - 58, W - M, H - 58);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...ink);
+    doc.text("Thank you for choosing PULSE — where every beat matters.", M, H - 44);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text(
+      "Support · care@pulse.audio · 1800-PULSE-IN (toll-free)  ·  Track order at pulse.audio/track/" + shortId,
+      M,
+      H - 30,
+    );
+    doc.text(
+      "PULSE Audio Pvt. Ltd. · CIN: U74999KA2021PTC145678 · GSTIN: 29ABCDE1234F1Z5",
+      M,
+      H - 20,
+    );
+    doc.setTextColor(...accent);
+    doc.text("www.pulse.audio", W - M, H - 20, { align: "right" });
+    doc.setTextColor(...muted);
+    doc.text(`Page ${p} of ${pageCount}`, W / 2, H - 20, { align: "center" });
+  }
 
   doc.save(`PULSE-Invoice-${shortId}.pdf`);
 }

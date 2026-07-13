@@ -111,6 +111,27 @@ function About() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
+        <div className="mono text-accent">— From lab to ear</div>
+        <h2 className="mt-2 font-display text-4xl font-bold tracking-tight sm:text-5xl">How we build a PULSE product.</h2>
+        <div className="mt-10 grid gap-4 md:grid-cols-5">
+          {[
+            ["01", "Listen", "300+ hours of user interviews across commuters, athletes and studio pros."],
+            ["02", "Prototype", "In-house acoustic chamber. 40+ driver revisions before a housing is frozen."],
+            ["03", "Tune", "Golden-ear panels in Bengaluru, Tokyo and Berlin refine the signature."],
+            ["04", "Test", "IP-rated drops, 500-hour battery cycling, sweat and salt-spray."],
+            ["05", "Ship", "Carbon-neutral logistics, unboxing tuned for that first-listen moment."],
+          ].map(([n, t, d]) => (
+            <div key={n} className="group relative rounded-2xl border border-border/60 bg-card p-5 transition-all hover:-translate-y-1 hover:border-accent/50">
+              <div className="mono text-[10px] text-accent">STEP {n}</div>
+              <div className="mt-2 font-display text-lg font-bold">{t}</div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">{d}</p>
+              <div className="absolute right-4 top-4 font-display text-3xl font-bold text-accent/10 transition-colors group-hover:text-accent/30">{n}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
         <div className="grid gap-6 rounded-3xl border border-border/60 bg-card p-8 sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>

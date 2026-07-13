@@ -1,22 +1,32 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BarChart3,
+  Bell,
+  Check,
   ChevronRight,
   Download,
   FileText,
   Heart,
+  KeyRound,
+  Loader2,
   LogOut,
   Mail,
+  Monitor,
+  Moon,
   Package,
   RotateCcw,
+  Save,
   Settings,
+  ShieldCheck,
   ShoppingBag,
   Sparkles,
+  Sun,
+  Trash2,
   TrendingUp,
   User as UserIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { inr } from "@/lib/format";
@@ -270,15 +280,341 @@ function Account() {
         </div>
       )}
 
-      {tab === "settings" && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <SettingRow icon={UserIcon} title="Personal information" desc="Update name, phone, default address" />
-          <SettingRow icon={Mail} title="Email preferences" desc="Marketing, order updates, sale alerts" />
-          <SettingRow icon={Settings} title="Account security" desc="Password, sessions, 2FA" />
-          <SettingRow icon={FileText} title="Tax & billing" desc="GST, business invoices" />
-        </div>
-      )}
+      {tab === "settings" && <SettingsPanel />}
     </div>
+  );
+}
+
+function SettingsPanel() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const [displayName, setDisplayName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name ?? "");
+      setAvatarUrl(profile.avatar_url ?? "");
+    } else if (user) {
+      setDisplayName(
+        (user.user_metadata?.full_name as string) ?? user.email?.split("@")[0] ?? "",
+      );
+    }
+  }, [profile, user]);
+
+  const readPrefs = () => {
+    if (typeof window === "undefined") return { marketing: true, orderUpdates: true, drops: false, gstin: "" };
+    try {
+      return {
+        marketing: localStorage.getItem("pulse:pref:marketing") !== "0",
+        orderUpdates: localStorage.getItem("pulse:pref:order-updates") !== "0",
+        drops: localStorage.getItem("pulse:pref:drops") === "1",
+        gstin: localStorage.getItem("pulse:pref:gstin") ?? "",
+      };
+    } catch {
+      return { marketing: true, orderUpdates: true, drops: false, gstin: "" };
+    }
+  };
+  const [prefs, setPrefs] = useState(readPrefs);
+  const setPref = (k: keyof typeof prefs, v: boolean | string) => {
+    setPrefs((p) => ({ ...p, [k]: v }));
+    try {
+      const map: Record<string, string> = {
+        marketing: "pulse:pref:marketing",
+        orderUpdates: "pulse:pref:order-updates",
+        drops: "pulse:pref:drops",
+        gstin: "pulse:pref:gstin",
+      };
+      const key = map[k as string];
+      if (typeof v === "boolean") localStorage.setItem(key, v ? "1" : "0");
+      else localStorage.setItem(key, v);
+    } catch { /* ignore */ }
+  };
+
+  const [theme, setTheme] = useState<"light" | "dark" | "system">(() => {
+    if (typeof window === "undefined") return "system";
+    return (localStorage.getItem("theme") as "light" | "dark" | "system") ?? "system";
+  });
+  const applyTheme = (t: "light" | "dark" | "system") => {
+    setTheme(t);
+    try {
+      localStorage.setItem("theme", t);
+      const root = document.documentElement;
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const isDark = t === "dark" || (t === "system" && prefersDark);
+      root.classList.toggle("dark", isDark);
+    } catch { /* ignore */ }
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ id: user.id, display_name: displayName || null, avatar_url: avatarUrl || null }, { onConflict: "id" });
+    setSaving(false);
+    if (error) {
+      toast.error("Couldn't save profile", { description: error.message });
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["profile", user.id] });
+    toast.success("Profile updated");
+  };
+
+  const sendPasswordReset = async () => {
+    if (!user?.email) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Password reset link sent", { description: `Check ${user.email}` });
+  };
+
+  return (
+    <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="space-y-6">
+        <section className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8">
+          <div className="flex items-center gap-2">
+            <UserIcon className="h-4 w-4 text-accent" />
+            <h2 className="font-display text-lg font-bold">Personal information</h2>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Shown on your orders, invoices, and reviews.</p>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <Labeled label="Display name">
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                className="w-full rounded-xl border border-border bg-surface-2 px-4 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              />
+            </Labeled>
+            <Labeled label="Email">
+              <input
+                value={user?.email ?? ""}
+                readOnly
+                className="w-full cursor-not-allowed rounded-xl border border-border bg-surface-2/40 px-4 py-2.5 text-sm text-muted-foreground"
+              />
+            </Labeled>
+            <Labeled label="Avatar URL (optional)">
+              <input
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+                placeholder="https://…"
+                className="w-full rounded-xl border border-border bg-surface-2 px-4 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              />
+            </Labeled>
+            <Labeled label="GSTIN (for business invoices)">
+              <input
+                value={prefs.gstin}
+                onChange={(e) => setPref("gstin", e.target.value.toUpperCase())}
+                placeholder="29ABCDE1234F1Z5"
+                maxLength={15}
+                className="w-full rounded-xl border border-border bg-surface-2 px-4 py-2.5 text-sm uppercase focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              />
+            </Labeled>
+          </div>
+          <div className="mt-5 flex justify-end">
+            <button
+              onClick={saveProfile}
+              disabled={saving}
+              className="btn-magnetic inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground disabled:opacity-60"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save changes
+            </button>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8">
+          <div className="flex items-center gap-2">
+            <Bell className="h-4 w-4 text-accent" />
+            <h2 className="font-display text-lg font-bold">Email preferences</h2>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Choose what lands in your inbox.</p>
+          <div className="mt-4 space-y-2">
+            <Toggle
+              label="Order updates"
+              desc="Shipping, delivery, and return notifications"
+              on={prefs.orderUpdates}
+              onChange={(v) => setPref("orderUpdates", v)}
+            />
+            <Toggle
+              label="New drops & launches"
+              desc="Early access to Series 03 and limited editions"
+              on={prefs.drops}
+              onChange={(v) => setPref("drops", v)}
+            />
+            <Toggle
+              label="Deals & marketing"
+              desc="Sale alerts, festive offers, and gift guides"
+              on={prefs.marketing}
+              onChange={(v) => setPref("marketing", v)}
+            />
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8">
+          <div className="flex items-center gap-2">
+            <Monitor className="h-4 w-4 text-accent" />
+            <h2 className="font-display text-lg font-bold">Appearance</h2>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Match your device or pick a side.</p>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {([
+              ["light", "Light", Sun],
+              ["dark", "Dark", Moon],
+              ["system", "System", Monitor],
+            ] as const).map(([id, label, Ico]) => (
+              <button
+                key={id}
+                onClick={() => applyTheme(id)}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-sm transition-colors ${
+                  theme === id
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-border bg-surface-2 hover:border-accent/50"
+                }`}
+              >
+                <Ico className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-border/60 bg-card p-6 sm:p-8">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-accent" />
+            <h2 className="font-display text-lg font-bold">Account security</h2>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Manage your password and sessions.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <button
+              onClick={sendPasswordReset}
+              className="flex items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 text-left text-sm hover:border-accent hover:text-accent"
+            >
+              <KeyRound className="h-4 w-4 text-accent" />
+              <div className="flex-1">
+                <div className="font-semibold">Send password reset</div>
+                <div className="text-xs text-muted-foreground">Emailed to {user?.email}</div>
+              </div>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() =>
+                toast("Contact support to delete your account", {
+                  description: "Write to care@pulse.audio with the subject 'Delete account'.",
+                })
+              }
+              className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-left text-sm text-destructive hover:border-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              <div className="flex-1">
+                <div className="font-semibold">Delete account</div>
+                <div className="text-xs text-destructive/80">Permanent — cannot be undone</div>
+              </div>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <aside className="space-y-4">
+        <div className="rounded-3xl border border-border/60 bg-card p-6">
+          <div className="mono text-[10px] text-muted-foreground">— Snapshot</div>
+          <h3 className="mt-2 font-display text-lg font-bold">Your PULSE identity</h3>
+          <div className="mt-4 flex items-center gap-3">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="h-12 w-12 rounded-full border border-border object-cover" />
+            ) : (
+              <div className="grid h-12 w-12 place-items-center rounded-full border border-accent/40 bg-accent/10 font-display text-sm font-bold text-accent">
+                {(displayName || user?.email || "P").slice(0, 2).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <div className="font-semibold">{displayName || "—"}</div>
+              <div className="text-xs text-muted-foreground">{user?.email}</div>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {prefs.orderUpdates && <Chip icon={Check}>Order updates on</Chip>}
+            {prefs.drops && <Chip icon={Check}>Drops on</Chip>}
+            {prefs.marketing && <Chip icon={Check}>Marketing on</Chip>}
+            {prefs.gstin && <Chip icon={FileText}>GST invoicing</Chip>}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-accent/40 bg-accent/5 p-6">
+          <Sparkles className="h-5 w-5 text-accent" />
+          <h3 className="mt-2 font-display text-base font-bold">Tip</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Add a GSTIN to receive business tax invoices on every order — automatically.
+          </p>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mono mb-1.5 block text-[10px] uppercase text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function Toggle({
+  label, desc, on, onChange,
+}: { label: string; desc: string; on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!on)}
+      className="flex w-full items-center gap-4 rounded-xl border border-border bg-surface-2 px-4 py-3 text-left transition-colors hover:border-accent/40"
+    >
+      <div className="flex-1">
+        <div className="text-sm font-semibold">{label}</div>
+        <div className="text-xs text-muted-foreground">{desc}</div>
+      </div>
+      <span
+        aria-hidden
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+          on ? "bg-accent" : "bg-border"
+        }`}
+      >
+        <span
+          className={`inline-block h-5 w-5 transform rounded-full bg-background shadow transition-transform ${
+            on ? "translate-x-5" : "translate-x-0.5"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
+function Chip({ icon: Icon, children }: { icon: typeof Check; children: React.ReactNode }) {
+  return (
+    <span className="mono inline-flex items-center gap-1 rounded-full border border-accent/30 bg-accent/5 px-2 py-1 text-[10px] text-accent">
+      <Icon className="h-3 w-3" />
+      {children}
+    </span>
   );
 }
 

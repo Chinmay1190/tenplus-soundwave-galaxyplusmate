@@ -146,6 +146,30 @@ function Contact() {
           </div>
         </aside>
       </div>
+
+      <section className="mt-16">
+        <div className="mono text-accent">— Before you write</div>
+        <h2 className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">Answered in 30 seconds.</h2>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {[
+            ["When will my order ship?", "Prepaid orders ship the same day if placed before 4 PM IST. COD ships in 1 business day."],
+            ["Is there a warranty on my earbuds?", "Yes — every PULSE product ships with a 2-year manufacturer warranty (3 years for PULSE+ members)."],
+            ["How do I return an item?", "Head to My Orders → Return. Pickup is scheduled within 48 hours, refund within 5 business days of pickup."],
+            ["Do you deliver outside India?", "We ship to 40+ countries. International duties may apply and are shown at checkout."],
+          ].map(([q, a]) => (
+            <details key={q} className="group rounded-2xl border border-border/60 bg-card p-5 transition-colors hover:border-accent/40">
+              <summary className="flex cursor-pointer items-center justify-between gap-3 font-display text-sm font-bold">
+                {q}
+                <span className="grid h-6 w-6 place-items-center rounded-full border border-border text-muted-foreground transition-transform group-open:rotate-45">+</span>
+              </summary>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{a}</p>
+            </details>
+          ))}
+        </div>
+        <div className="mt-4 text-xs text-muted-foreground">
+          Can't find it? <a href="/faq" className="text-accent hover:underline">Browse the full FAQ →</a>
+        </div>
+      </section>
       </div>
     </div>
   );
