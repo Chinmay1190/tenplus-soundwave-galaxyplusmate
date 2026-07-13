@@ -449,12 +449,11 @@ export function downloadInvoice(data: InvoiceData) {
     doc.saveGraphicsState?.();
     doc.setFont("helvetica", "bold");
     doc.setFontSize(90);
-    // @ts-expect-error jspdf GState typing
-    doc.setGState?.(new (doc as unknown as { GState: new (o: { opacity: number }) => unknown }).GState({ opacity: 0.04 }));
+    const GS = (doc as unknown as { GState?: new (o: { opacity: number }) => unknown; setGState?: (s: unknown) => void });
+    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 0.04 }));
     doc.setTextColor(...ink);
     doc.text("PULSE", W / 2, H / 2, { align: "center", angle: -28 });
-    // @ts-expect-error jspdf GState typing
-    doc.setGState?.(new (doc as unknown as { GState: new (o: { opacity: number }) => unknown }).GState({ opacity: 1 }));
+    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 1 }));
     doc.restoreGraphicsState?.();
 
     doc.setDrawColor(...hair);
