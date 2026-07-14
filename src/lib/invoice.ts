@@ -449,21 +449,72 @@ export function downloadInvoice(data: InvoiceData) {
   ];
   terms.forEach((t, i) => doc.text(t, M, y + 14 + i * 11));
 
-  // Signature box
+  // Signature + QR verification block
   const sigX = W - M - 160;
   const sigY = y + 6;
+
+  // Pseudo-QR (deterministic from order id) — visual "scan to verify"
+  const qrSize = 54;
+  const qrX = sigX;
+  const qrY = sigY - 4;
+  const grid = 11;
+  const cell = qrSize / grid;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(qrX, qrY, qrSize, qrSize, "F");
+  doc.setDrawColor(...hair);
+  doc.rect(qrX, qrY, qrSize, qrSize, "S");
+  // Finder-style corners
+  doc.setFillColor(...ink);
+  const finder = (fx: number, fy: number) => {
+    doc.rect(fx, fy, cell * 3, cell * 3, "F");
+    doc.setFillColor(255, 255, 255);
+    doc.rect(fx + cell * 0.5, fy + cell * 0.5, cell * 2, cell * 2, "F");
+    doc.setFillColor(...ink);
+    doc.rect(fx + cell, fy + cell, cell, cell, "F");
+  };
+  finder(qrX, qrY);
+  finder(qrX + qrSize - cell * 3, qrY);
+  finder(qrX, qrY + qrSize - cell * 3);
+  // Data modules — deterministic from id hash
+  let seed = Array.from(data.id).reduce((a, c) => (a * 1103515245 + c.charCodeAt(0)) >>> 0, 1);
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 0xffffffff;
+  };
+  for (let gx = 0; gx < grid; gx++) {
+    for (let gy = 0; gy < grid; gy++) {
+      const inFinder =
+        (gx < 3 && gy < 3) ||
+        (gx > grid - 4 && gy < 3) ||
+        (gx < 3 && gy > grid - 4);
+      if (inFinder) continue;
+      if (rnd() > 0.52) {
+        doc.rect(qrX + gx * cell, qrY + gy * cell, cell, cell, "F");
+      }
+    }
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...muted);
+  doc.text("SCAN TO VERIFY", qrX + qrSize / 2, qrY + qrSize + 8, { align: "center" });
+
+  // Signature line + text (offset right of QR)
+  const sTextX = sigX + qrSize + 12;
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.5);
-  doc.line(sigX, sigY + 44, W - M, sigY + 44);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...muted);
-  doc.text("For PULSE Audio Pvt. Ltd.", sigX + 80, sigY + 56, { align: "center" });
-  doc.text("Authorised Signatory · Digitally signed", sigX + 80, sigY + 66, { align: "center" });
+  doc.line(sTextX, sigY + 44, W - M, sigY + 44);
   doc.setFont("helvetica", "italic");
   doc.setFontSize(14);
   doc.setTextColor(...accent);
-  doc.text("PULSE", sigX + 80, sigY + 38, { align: "center" });
+  doc.text("PULSE", (sTextX + W - M) / 2, sigY + 38, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...muted);
+  doc.text("For PULSE Audio Pvt. Ltd.", (sTextX + W - M) / 2, sigY + 56, { align: "center" });
+  doc.text("Authorised Signatory · Digitally signed", (sTextX + W - M) / 2, sigY + 66, {
+    align: "center",
+  });
+
 
   // ── FOOTER (with page numbers + watermark) ───────────────
   const pageCount = doc.getNumberOfPages();
