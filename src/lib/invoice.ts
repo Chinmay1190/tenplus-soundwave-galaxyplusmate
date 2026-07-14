@@ -155,7 +155,7 @@ export function downloadInvoice(data: InvoiceData) {
   const barX0 = W - M - pillW;
   const barTotalW = pillW;
   const barH = 18;
-  const seed = Array.from(data.id).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
+  const barSeed = Array.from(data.id).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
   doc.setFillColor(255, 255, 255);
   doc.rect(barX0, barY, barTotalW, barH, "F");
   let bx = barX0 + 2;
