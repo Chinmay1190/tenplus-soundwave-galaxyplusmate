@@ -270,9 +270,27 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
     doc.text(`Account: ${customerName}`, W - M - pillW + 14, 118);
   }
 
+  // Report ID (deterministic from period + generation minute)
+  const reportId =
+    "RPT-" +
+    s.from.toISOString().slice(0, 10).replace(/-/g, "") +
+    "-" +
+    Math.abs(
+      Array.from(s.label + s.rangeLabel).reduce((a, c) => a * 31 + c.charCodeAt(0), 7),
+    )
+      .toString(36)
+      .slice(0, 5)
+      .toUpperCase();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text(`REPORT ID · ${reportId}`, M, 112);
+  doc.text(`GENERATED · ${fmt(new Date())}`, M, 124);
+
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.6);
   doc.line(M, 138, W - M, 138);
+
 
   // ── EXECUTIVE SUMMARY ────────────────────────────────────
   let esY = 152;
@@ -347,17 +365,42 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
 
   if (s.series.length > 0) {
     const maxRev = Math.max(...s.series.map((d) => d.revenue), 1);
-    const bw = (chartW - 24) / s.series.length;
-    // Skip labels when too crowded (>14 buckets)
+    // "Nice" ceiling for Y-axis: round up to 1/2/5 × 10^n
+    const niceCeil = (v: number) => {
+      const exp = Math.pow(10, Math.floor(Math.log10(v)));
+      const f = v / exp;
+      const nice = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+      return nice * exp;
+    };
+    const yMax = niceCeil(maxRev);
+    const plotTop = y + 14;
+    const plotBottom = y + chartH - 18;
+    const plotH = plotBottom - plotTop;
+
+    // Gridlines + Y-axis ticks (4 divisions)
+    doc.setDrawColor(...hair);
+    doc.setLineWidth(0.4);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...muted);
+    for (let i = 0; i <= 4; i++) {
+      const gy = plotTop + (plotH * i) / 4;
+      doc.line(M + 44, gy, M + chartW - 6, gy);
+      const val = yMax * (1 - i / 4);
+      doc.text(inr(val), M + 40, gy + 3, { align: "right" });
+    }
+
+    const bw = (chartW - 56) / s.series.length;
     const labelStride = Math.max(1, Math.ceil(s.series.length / 14));
     s.series.forEach((d, i) => {
-      const bh = (d.revenue / maxRev) * (chartH - 32);
-      const bx = M + 12 + i * bw;
-      const by = y + chartH - 18 - bh;
+      const bh = (d.revenue / yMax) * plotH;
+      const bx = M + 44 + i * bw;
+      const by = plotBottom - bh;
+      // Bar with subtle gradient (dark base + accent cap)
       doc.setFillColor(...ink);
-      doc.rect(bx + 4, by, Math.max(2, bw - 8), bh, "F");
+      doc.rect(bx + 3, by, Math.max(2, bw - 6), bh, "F");
       doc.setFillColor(...accent);
-      doc.rect(bx + 4, by, Math.max(2, bw - 8), Math.min(4, bh), "F");
+      doc.rect(bx + 3, by, Math.max(2, bw - 6), Math.min(4, bh), "F");
       if (i % labelStride === 0) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
@@ -365,17 +408,21 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
         doc.text(d.label, bx + bw / 2, y + chartH - 6, { align: "center" });
       }
     });
-    // Y-axis reference (max revenue)
+
+    // Legend
+    doc.setFillColor(...accent);
+    doc.rect(M + chartW - 90, y + 4, 8, 8, "F");
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(...muted);
-    doc.text(inr(maxRev), M + chartW - 6, y + 12, { align: "right" });
+    doc.setFontSize(7.5);
+    doc.setTextColor(...sub);
+    doc.text("Revenue (INR)", M + chartW - 78, y + 11);
   } else {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(10);
     doc.setTextColor(...muted);
     doc.text("No orders in this period.", W / 2, y + chartH / 2, { align: "center" });
   }
+
 
 
   // ── CATEGORY TABLE ───────────────────────────────────────
@@ -403,18 +450,37 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
     doc.text("—", M + 12, y);
     y += 18;
   } else {
+    const catTotal = s.byCategory.reduce((a, b) => a + b.revenue, 0) || 1;
     s.byCategory.slice(0, 6).forEach((c, i) => {
       if (i % 2 === 1) {
         doc.setFillColor(...tint);
         doc.rect(M, y - 12, chartW, 20, "F");
       }
       doc.setTextColor(...ink);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
       doc.text(c.name.toUpperCase(), M + 12, y);
+      // Share mini-bar
+      const share = c.revenue / catTotal;
+      const barX = M + chartW / 2;
+      const barW = chartW / 4;
+      doc.setFillColor(...hair);
+      doc.rect(barX, y - 6, barW, 6, "F");
+      doc.setFillColor(...accent);
+      doc.rect(barX, y - 6, barW * share, 6, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(...muted);
+      doc.text(`${(share * 100).toFixed(0)}%`, barX + barW + 6, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(...ink);
       doc.text(String(c.units), M + chartW - 160, y, { align: "right" });
       doc.text(inr(c.revenue), M + chartW - 12, y, { align: "right" });
       y += 20;
     });
   }
+
 
   // Page break if needed
   if (y > H - 240) {
@@ -560,18 +626,34 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
   );
 
 
-  // Footer on each page
+  // Footer + watermark on each page
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
+
+    // Diagonal watermark
+    doc.saveGraphicsState?.();
+    const GS = (doc as unknown as {
+      GState?: new (o: { opacity: number }) => unknown;
+      setGState?: (s: unknown) => void;
+    });
+    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 0.035 }));
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(84);
+    doc.setTextColor(...ink);
+    doc.text("PULSE ANALYTICS", W / 2, H / 2, { align: "center", angle: -26 });
+    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 1 }));
+    doc.restoreGraphicsState?.();
+
     doc.setDrawColor(...hair);
     doc.line(M, H - 50, W - M, H - 50);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...muted);
-    doc.text(`Generated ${fmt(new Date())} · PULSE Analytics`, M, H - 34);
+    doc.text(`Generated ${fmt(new Date())} · PULSE Analytics · ${reportId}`, M, H - 34);
     doc.text(`Page ${p} of ${total}`, W - M, H - 34, { align: "right" });
     doc.setTextColor(...accent);
+
     doc.text("www.pulse.audio", W / 2, H - 22, { align: "center" });
   }
 

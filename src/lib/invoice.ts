@@ -380,8 +380,32 @@ export function downloadInvoice(data: InvoiceData) {
   doc.setFillColor(...accent);
   doc.rect(M, y + 60, W - 2 * M, 4, "F");
 
+  // ── TRANSACTION REFERENCE STRIP ──────────────────────────
+  y += 72;
+  // Deterministic txn ref from order id
+  const txnHash = Array.from(data.id).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
+  const txnRef = "TXN" + txnHash.toString(36).toUpperCase().padStart(10, "0").slice(0, 10);
+  const utrRef = "UTR" + ((txnHash ^ 0x9e3779b9) >>> 0).toString().padStart(12, "0").slice(0, 12);
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...hair);
+  doc.rect(M, y, W - 2 * M, 30, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text("TXN REF", M + 12, y + 12);
+  doc.text("UTR / BANK REF", M + 180, y + 12);
+  doc.text("SETTLED ON", M + 360, y + 12);
+  doc.setFont("courier", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...ink);
+  doc.text(txnRef, M + 12, y + 24);
+  doc.text(utrRef, M + 180, y + 24);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text(dateFmt(created), M + 360, y + 24);
+
   // ── VALUE-ADD BENEFITS BAR ───────────────────────────────
-  y += 78;
+  y += 42;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...accent);
@@ -400,6 +424,7 @@ export function downloadInvoice(data: InvoiceData) {
     const rowIdx = Math.floor(i / 2);
     doc.text(p, M + col * ((W - 2 * M) / 2), y + 14 + rowIdx * 12);
   });
+
 
   // ── TERMS & SIGNATURE ────────────────────────────────────
   y += 46;
@@ -424,21 +449,72 @@ export function downloadInvoice(data: InvoiceData) {
   ];
   terms.forEach((t, i) => doc.text(t, M, y + 14 + i * 11));
 
-  // Signature box
+  // Signature + QR verification block
   const sigX = W - M - 160;
   const sigY = y + 6;
+
+  // Pseudo-QR (deterministic from order id) — visual "scan to verify"
+  const qrSize = 54;
+  const qrX = sigX;
+  const qrY = sigY - 4;
+  const grid = 11;
+  const cell = qrSize / grid;
+  doc.setFillColor(255, 255, 255);
+  doc.rect(qrX, qrY, qrSize, qrSize, "F");
+  doc.setDrawColor(...hair);
+  doc.rect(qrX, qrY, qrSize, qrSize, "S");
+  // Finder-style corners
+  doc.setFillColor(...ink);
+  const finder = (fx: number, fy: number) => {
+    doc.rect(fx, fy, cell * 3, cell * 3, "F");
+    doc.setFillColor(255, 255, 255);
+    doc.rect(fx + cell * 0.5, fy + cell * 0.5, cell * 2, cell * 2, "F");
+    doc.setFillColor(...ink);
+    doc.rect(fx + cell, fy + cell, cell, cell, "F");
+  };
+  finder(qrX, qrY);
+  finder(qrX + qrSize - cell * 3, qrY);
+  finder(qrX, qrY + qrSize - cell * 3);
+  // Data modules — deterministic from id hash
+  let seed = Array.from(data.id).reduce((a, c) => (a * 1103515245 + c.charCodeAt(0)) >>> 0, 1);
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 0xffffffff;
+  };
+  for (let gx = 0; gx < grid; gx++) {
+    for (let gy = 0; gy < grid; gy++) {
+      const inFinder =
+        (gx < 3 && gy < 3) ||
+        (gx > grid - 4 && gy < 3) ||
+        (gx < 3 && gy > grid - 4);
+      if (inFinder) continue;
+      if (rnd() > 0.52) {
+        doc.rect(qrX + gx * cell, qrY + gy * cell, cell, cell, "F");
+      }
+    }
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...muted);
+  doc.text("SCAN TO VERIFY", qrX + qrSize / 2, qrY + qrSize + 8, { align: "center" });
+
+  // Signature line + text (offset right of QR)
+  const sTextX = sigX + qrSize + 12;
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.5);
-  doc.line(sigX, sigY + 44, W - M, sigY + 44);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...muted);
-  doc.text("For PULSE Audio Pvt. Ltd.", sigX + 80, sigY + 56, { align: "center" });
-  doc.text("Authorised Signatory · Digitally signed", sigX + 80, sigY + 66, { align: "center" });
+  doc.line(sTextX, sigY + 44, W - M, sigY + 44);
   doc.setFont("helvetica", "italic");
   doc.setFontSize(14);
   doc.setTextColor(...accent);
-  doc.text("PULSE", sigX + 80, sigY + 38, { align: "center" });
+  doc.text("PULSE", (sTextX + W - M) / 2, sigY + 38, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...muted);
+  doc.text("For PULSE Audio Pvt. Ltd.", (sTextX + W - M) / 2, sigY + 56, { align: "center" });
+  doc.text("Authorised Signatory · Digitally signed", (sTextX + W - M) / 2, sigY + 66, {
+    align: "center",
+  });
+
 
   // ── FOOTER (with page numbers + watermark) ───────────────
   const pageCount = doc.getNumberOfPages();
