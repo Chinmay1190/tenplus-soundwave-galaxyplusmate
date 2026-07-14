@@ -159,7 +159,7 @@ export function downloadInvoice(data: InvoiceData) {
   doc.setFillColor(255, 255, 255);
   doc.rect(barX0, barY, barTotalW, barH, "F");
   let bx = barX0 + 2;
-  let r = seed;
+  let r = barSeed;
   while (bx < barX0 + barTotalW - 2) {
     r = (r * 1103515245 + 12345) >>> 0;
     const w = 1 + (r % 3);
