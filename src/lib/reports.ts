@@ -626,18 +626,34 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
   );
 
 
-  // Footer on each page
+  // Footer + watermark on each page
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
+
+    // Diagonal watermark
+    doc.saveGraphicsState?.();
+    const GS = (doc as unknown as {
+      GState?: new (o: { opacity: number }) => unknown;
+      setGState?: (s: unknown) => void;
+    });
+    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 0.035 }));
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(84);
+    doc.setTextColor(...ink);
+    doc.text("PULSE ANALYTICS", W / 2, H / 2, { align: "center", angle: -26 });
+    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 1 }));
+    doc.restoreGraphicsState?.();
+
     doc.setDrawColor(...hair);
     doc.line(M, H - 50, W - M, H - 50);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...muted);
-    doc.text(`Generated ${fmt(new Date())} · PULSE Analytics`, M, H - 34);
+    doc.text(`Generated ${fmt(new Date())} · PULSE Analytics · ${reportId}`, M, H - 34);
     doc.text(`Page ${p} of ${total}`, W - M, H - 34, { align: "right" });
     doc.setTextColor(...accent);
+
     doc.text("www.pulse.audio", W / 2, H - 22, { align: "center" });
   }
 
