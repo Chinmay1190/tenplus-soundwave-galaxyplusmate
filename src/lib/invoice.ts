@@ -380,8 +380,32 @@ export function downloadInvoice(data: InvoiceData) {
   doc.setFillColor(...accent);
   doc.rect(M, y + 60, W - 2 * M, 4, "F");
 
+  // ── TRANSACTION REFERENCE STRIP ──────────────────────────
+  y += 72;
+  // Deterministic txn ref from order id
+  const txnHash = Array.from(data.id).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
+  const txnRef = "TXN" + txnHash.toString(36).toUpperCase().padStart(10, "0").slice(0, 10);
+  const utrRef = "UTR" + ((txnHash ^ 0x9e3779b9) >>> 0).toString().padStart(12, "0").slice(0, 12);
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...hair);
+  doc.rect(M, y, W - 2 * M, 30, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text("TXN REF", M + 12, y + 12);
+  doc.text("UTR / BANK REF", M + 180, y + 12);
+  doc.text("SETTLED ON", M + 360, y + 12);
+  doc.setFont("courier", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...ink);
+  doc.text(txnRef, M + 12, y + 24);
+  doc.text(utrRef, M + 180, y + 24);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.text(dateFmt(created), M + 360, y + 24);
+
   // ── VALUE-ADD BENEFITS BAR ───────────────────────────────
-  y += 78;
+  y += 42;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...accent);
@@ -400,6 +424,7 @@ export function downloadInvoice(data: InvoiceData) {
     const rowIdx = Math.floor(i / 2);
     doc.text(p, M + col * ((W - 2 * M) / 2), y + 14 + rowIdx * 12);
   });
+
 
   // ── TERMS & SIGNATURE ────────────────────────────────────
   y += 46;
