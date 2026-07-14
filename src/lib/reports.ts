@@ -392,11 +392,11 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
 
     const bw = (chartW - 56) / s.series.length;
     const labelStride = Math.max(1, Math.ceil(s.series.length / 14));
+    const maxOrders = Math.max(...s.series.map((d) => d.orders), 1);
     s.series.forEach((d, i) => {
       const bh = (d.revenue / yMax) * plotH;
       const bx = M + 44 + i * bw;
       const by = plotBottom - bh;
-      // Bar with subtle gradient (dark base + accent cap)
       doc.setFillColor(...ink);
       doc.rect(bx + 3, by, Math.max(2, bw - 6), bh, "F");
       doc.setFillColor(...accent);
@@ -409,13 +409,40 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
       }
     });
 
-    // Legend
-    doc.setFillColor(...accent);
-    doc.rect(M + chartW - 90, y + 4, 8, 8, "F");
+    // Orders line overlay (dual axis) — accent line with node dots
+    doc.setDrawColor(...accent);
+    doc.setLineWidth(1.4);
+    let prevX = 0;
+    let prevY = 0;
+    s.series.forEach((d, i) => {
+      const px = M + 44 + i * bw + bw / 2;
+      const py = plotBottom - (d.orders / maxOrders) * plotH * 0.9;
+      if (i > 0) doc.line(prevX, prevY, px, py);
+      prevX = px;
+      prevY = py;
+    });
+    s.series.forEach((d, i) => {
+      const px = M + 44 + i * bw + bw / 2;
+      const py = plotBottom - (d.orders / maxOrders) * plotH * 0.9;
+      doc.setFillColor(255, 255, 255);
+      doc.circle(px, py, 2.2, "F");
+      doc.setFillColor(...accent);
+      doc.circle(px, py, 1.6, "F");
+    });
+
+    // Legend (two swatches)
+    doc.setFillColor(...ink);
+    doc.rect(M + chartW - 190, y + 4, 8, 8, "F");
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...sub);
-    doc.text("Revenue (INR)", M + chartW - 78, y + 11);
+    doc.text("Revenue", M + chartW - 178, y + 11);
+    doc.setDrawColor(...accent);
+    doc.setLineWidth(1.4);
+    doc.line(M + chartW - 130, y + 8, M + chartW - 116, y + 8);
+    doc.setFillColor(...accent);
+    doc.circle(M + chartW - 123, y + 8, 1.6, "F");
+    doc.text("Orders", M + chartW - 112, y + 11);
   } else {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(10);
