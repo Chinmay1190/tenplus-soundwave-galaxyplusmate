@@ -450,18 +450,37 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
     doc.text("—", M + 12, y);
     y += 18;
   } else {
+    const catTotal = s.byCategory.reduce((a, b) => a + b.revenue, 0) || 1;
     s.byCategory.slice(0, 6).forEach((c, i) => {
       if (i % 2 === 1) {
         doc.setFillColor(...tint);
         doc.rect(M, y - 12, chartW, 20, "F");
       }
       doc.setTextColor(...ink);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
       doc.text(c.name.toUpperCase(), M + 12, y);
+      // Share mini-bar
+      const share = c.revenue / catTotal;
+      const barX = M + chartW / 2;
+      const barW = chartW / 4;
+      doc.setFillColor(...hair);
+      doc.rect(barX, y - 6, barW, 6, "F");
+      doc.setFillColor(...accent);
+      doc.rect(barX, y - 6, barW * share, 6, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(...muted);
+      doc.text(`${(share * 100).toFixed(0)}%`, barX + barW + 6, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(...ink);
       doc.text(String(c.units), M + chartW - 160, y, { align: "right" });
       doc.text(inr(c.revenue), M + chartW - 12, y, { align: "right" });
       y += 20;
     });
   }
+
 
   // Page break if needed
   if (y > H - 240) {
