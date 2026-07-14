@@ -428,8 +428,35 @@ export function downloadInvoice(data: InvoiceData) {
   doc.setFontSize(9.5);
   doc.text(dateFmt(created), M + 360, y + 24);
 
-  // ── VALUE-ADD BENEFITS BAR ───────────────────────────────
+  // ── PAYMENT INSTRUCTIONS (only when DUE) ─────────────────
   y += 42;
+  if (!isPaid) {
+    if (y + 70 > H - 60) { doc.addPage(); y = M + 20; }
+    doc.setFillColor(255, 248, 240);
+    doc.setDrawColor(...accent);
+    doc.setLineWidth(0.6);
+    doc.rect(M, y, W - 2 * M, 62, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...accent);
+    doc.text("PAYMENT INSTRUCTIONS · PLEASE SETTLE BY " + dateFmt(due).toUpperCase(), M + 12, y + 14);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...ink);
+    doc.text("Bank: HDFC Bank  ·  A/C: PULSE Audio Pvt. Ltd.  ·  A/C No: 5010 0234 5678 90", M + 12, y + 30);
+    doc.text("IFSC: HDFC0001234  ·  Branch: MG Road, Bengaluru", M + 12, y + 44);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...accentDark);
+    doc.text(`UPI: pulse@hdfcbank  ·  Ref: INV-${shortId}`, W - M - 12, y + 44, { align: "right" });
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text("Quote the invoice number as UPI/NEFT reference for auto-reconciliation.", W - M - 12, y + 30, { align: "right" });
+    y += 74;
+  }
+
+  // ── VALUE-ADD BENEFITS BAR ───────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...accent);
