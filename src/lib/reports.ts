@@ -270,9 +270,27 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
     doc.text(`Account: ${customerName}`, W - M - pillW + 14, 118);
   }
 
+  // Report ID (deterministic from period + generation minute)
+  const reportId =
+    "RPT-" +
+    s.from.toISOString().slice(0, 10).replace(/-/g, "") +
+    "-" +
+    Math.abs(
+      Array.from(s.label + s.rangeLabel).reduce((a, c) => a * 31 + c.charCodeAt(0), 7),
+    )
+      .toString(36)
+      .slice(0, 5)
+      .toUpperCase();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text(`REPORT ID · ${reportId}`, M, 112);
+  doc.text(`GENERATED · ${fmt(new Date())}`, M, 124);
+
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.6);
   doc.line(M, 138, W - M, 138);
+
 
   // ── EXECUTIVE SUMMARY ────────────────────────────────────
   let esY = 152;
