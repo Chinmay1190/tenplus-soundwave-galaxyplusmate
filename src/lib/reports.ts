@@ -347,17 +347,42 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
 
   if (s.series.length > 0) {
     const maxRev = Math.max(...s.series.map((d) => d.revenue), 1);
-    const bw = (chartW - 24) / s.series.length;
-    // Skip labels when too crowded (>14 buckets)
+    // "Nice" ceiling for Y-axis: round up to 1/2/5 × 10^n
+    const niceCeil = (v: number) => {
+      const exp = Math.pow(10, Math.floor(Math.log10(v)));
+      const f = v / exp;
+      const nice = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+      return nice * exp;
+    };
+    const yMax = niceCeil(maxRev);
+    const plotTop = y + 14;
+    const plotBottom = y + chartH - 18;
+    const plotH = plotBottom - plotTop;
+
+    // Gridlines + Y-axis ticks (4 divisions)
+    doc.setDrawColor(...hair);
+    doc.setLineWidth(0.4);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...muted);
+    for (let i = 0; i <= 4; i++) {
+      const gy = plotTop + (plotH * i) / 4;
+      doc.line(M + 44, gy, M + chartW - 6, gy);
+      const val = yMax * (1 - i / 4);
+      doc.text(inr(val), M + 40, gy + 3, { align: "right" });
+    }
+
+    const bw = (chartW - 56) / s.series.length;
     const labelStride = Math.max(1, Math.ceil(s.series.length / 14));
     s.series.forEach((d, i) => {
-      const bh = (d.revenue / maxRev) * (chartH - 32);
-      const bx = M + 12 + i * bw;
-      const by = y + chartH - 18 - bh;
+      const bh = (d.revenue / yMax) * plotH;
+      const bx = M + 44 + i * bw;
+      const by = plotBottom - bh;
+      // Bar with subtle gradient (dark base + accent cap)
       doc.setFillColor(...ink);
-      doc.rect(bx + 4, by, Math.max(2, bw - 8), bh, "F");
+      doc.rect(bx + 3, by, Math.max(2, bw - 6), bh, "F");
       doc.setFillColor(...accent);
-      doc.rect(bx + 4, by, Math.max(2, bw - 8), Math.min(4, bh), "F");
+      doc.rect(bx + 3, by, Math.max(2, bw - 6), Math.min(4, bh), "F");
       if (i % labelStride === 0) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
@@ -365,17 +390,21 @@ export function downloadReportPDF(s: ReportSummary, customerName?: string) {
         doc.text(d.label, bx + bw / 2, y + chartH - 6, { align: "center" });
       }
     });
-    // Y-axis reference (max revenue)
+
+    // Legend
+    doc.setFillColor(...accent);
+    doc.rect(M + chartW - 90, y + 4, 8, 8, "F");
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(...muted);
-    doc.text(inr(maxRev), M + chartW - 6, y + 12, { align: "right" });
+    doc.setFontSize(7.5);
+    doc.setTextColor(...sub);
+    doc.text("Revenue (INR)", M + chartW - 78, y + 11);
   } else {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(10);
     doc.setTextColor(...muted);
     doc.text("No orders in this period.", W / 2, y + chartH / 2, { align: "center" });
   }
+
 
 
   // ── CATEGORY TABLE ───────────────────────────────────────
