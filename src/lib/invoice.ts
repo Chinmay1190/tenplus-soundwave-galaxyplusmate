@@ -150,10 +150,34 @@ export function downloadInvoice(data: InvoiceData) {
   doc.text(dateFmt(created), W - M - 10, 118, { align: "right" });
   doc.text(dateFmt(due), W - M - 10, 132, { align: "right" });
 
+  // Pseudo-barcode strip beneath the meta pill (Code128-esque)
+  const barY = 140;
+  const barX0 = W - M - pillW;
+  const barTotalW = pillW;
+  const barH = 18;
+  const seed = Array.from(data.id).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(barX0, barY, barTotalW, barH, "F");
+  let bx = barX0 + 2;
+  let r = seed;
+  while (bx < barX0 + barTotalW - 2) {
+    r = (r * 1103515245 + 12345) >>> 0;
+    const w = 1 + (r % 3);
+    if ((r >> 4) & 1) {
+      doc.setFillColor(...ink);
+      doc.rect(bx, barY, w, barH - 6, "F");
+    }
+    bx += w + 0.6;
+  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...muted);
+  doc.text(`*INV-${shortId}*`, barX0 + barTotalW / 2, barY + barH - 1, { align: "center" });
+
   // Hairline rule
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.6);
-  doc.line(M, 148, W - M, 148);
+  doc.line(M, 166, W - M, 166);
 
   // ── PARTIES ──────────────────────────────────────────────
   let y = 170;
