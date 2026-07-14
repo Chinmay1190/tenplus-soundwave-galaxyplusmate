@@ -150,10 +150,34 @@ export function downloadInvoice(data: InvoiceData) {
   doc.text(dateFmt(created), W - M - 10, 118, { align: "right" });
   doc.text(dateFmt(due), W - M - 10, 132, { align: "right" });
 
+  // Pseudo-barcode strip beneath the meta pill (Code128-esque)
+  const barY = 140;
+  const barX0 = W - M - pillW;
+  const barTotalW = pillW;
+  const barH = 18;
+  const barSeed = Array.from(data.id).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(barX0, barY, barTotalW, barH, "F");
+  let bx = barX0 + 2;
+  let r = barSeed;
+  while (bx < barX0 + barTotalW - 2) {
+    r = (r * 1103515245 + 12345) >>> 0;
+    const w = 1 + (r % 3);
+    if ((r >> 4) & 1) {
+      doc.setFillColor(...ink);
+      doc.rect(bx, barY, w, barH - 6, "F");
+    }
+    bx += w + 0.6;
+  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...muted);
+  doc.text(`*INV-${shortId}*`, barX0 + barTotalW / 2, barY + barH - 1, { align: "center" });
+
   // Hairline rule
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.6);
-  doc.line(M, 148, W - M, 148);
+  doc.line(M, 166, W - M, 166);
 
   // ── PARTIES ──────────────────────────────────────────────
   let y = 170;
@@ -200,8 +224,23 @@ export function downloadInvoice(data: InvoiceData) {
   if (shipLines.length === 0) shipLines.push("Same as billing");
   shipLines.forEach((l, i) => doc.text(l, M + colW * 2, y + 16 + i * 13));
 
+  // Place of supply row
+  const pos = (addr.state as string) || "Karnataka";
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text("PLACE OF SUPPLY", M, 252);
+  doc.text("REVERSE CHARGE", M + colW, 252);
+  doc.text("CURRENCY", M + colW * 2, 252);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...ink);
+  doc.text(pos, M, 264);
+  doc.text("No", M + colW, 264);
+  doc.text("INR (Indian Rupee)", M + colW * 2, 264);
+
   // ── ITEMS TABLE ──────────────────────────────────────────
-  y = 260;
+  y = 284;
   const tableX = M;
   const tableW = W - 2 * M;
   const colHsn = M + 280;
@@ -404,8 +443,35 @@ export function downloadInvoice(data: InvoiceData) {
   doc.setFontSize(9.5);
   doc.text(dateFmt(created), M + 360, y + 24);
 
-  // ── VALUE-ADD BENEFITS BAR ───────────────────────────────
+  // ── PAYMENT INSTRUCTIONS (only when DUE) ─────────────────
   y += 42;
+  if (!isPaid) {
+    if (y + 70 > H - 60) { doc.addPage(); y = M + 20; }
+    doc.setFillColor(255, 248, 240);
+    doc.setDrawColor(...accent);
+    doc.setLineWidth(0.6);
+    doc.rect(M, y, W - 2 * M, 62, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...accent);
+    doc.text("PAYMENT INSTRUCTIONS · PLEASE SETTLE BY " + dateFmt(due).toUpperCase(), M + 12, y + 14);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...ink);
+    doc.text("Bank: HDFC Bank  ·  A/C: PULSE Audio Pvt. Ltd.  ·  A/C No: 5010 0234 5678 90", M + 12, y + 30);
+    doc.text("IFSC: HDFC0001234  ·  Branch: MG Road, Bengaluru", M + 12, y + 44);
+    doc.setFont("courier", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...accentDark);
+    doc.text(`UPI: pulse@hdfcbank  ·  Ref: INV-${shortId}`, W - M - 12, y + 44, { align: "right" });
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...muted);
+    doc.text("Quote the invoice number as UPI/NEFT reference for auto-reconciliation.", W - M - 12, y + 30, { align: "right" });
+    y += 74;
+  }
+
+  // ── VALUE-ADD BENEFITS BAR ───────────────────────────────
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
   doc.setTextColor(...accent);
