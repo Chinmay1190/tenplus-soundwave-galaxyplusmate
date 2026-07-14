@@ -224,8 +224,23 @@ export function downloadInvoice(data: InvoiceData) {
   if (shipLines.length === 0) shipLines.push("Same as billing");
   shipLines.forEach((l, i) => doc.text(l, M + colW * 2, y + 16 + i * 13));
 
+  // Place of supply row
+  const pos = (addr.state as string) || "Karnataka";
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text("PLACE OF SUPPLY", M, 252);
+  doc.text("REVERSE CHARGE", M + colW, 252);
+  doc.text("CURRENCY", M + colW * 2, 252);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...ink);
+  doc.text(pos, M, 264);
+  doc.text("No", M + colW, 264);
+  doc.text("INR (Indian Rupee)", M + colW * 2, 264);
+
   // ── ITEMS TABLE ──────────────────────────────────────────
-  y = 260;
+  y = 284;
   const tableX = M;
   const tableW = W - 2 * M;
   const colHsn = M + 280;
