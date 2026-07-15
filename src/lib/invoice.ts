@@ -189,10 +189,10 @@ export function downloadInvoice(data: InvoiceData) {
   // Hairline rule
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.6);
-  doc.line(M, 166, W - M, 166);
+  doc.line(M, 194, W - M, 194);
 
   // ── PARTIES ──────────────────────────────────────────────
-  let y = 170;
+  let y = 200;
   const colW = (W - 2 * M) / 3;
 
   const labelStyle = () => {
