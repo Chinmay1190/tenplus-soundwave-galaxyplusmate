@@ -163,7 +163,7 @@ export function downloadInvoice(data: InvoiceData) {
   doc.text(ackNo, W - M - 10, 158, { align: "right" });
 
   // Pseudo-barcode strip beneath the meta pill (Code128-esque)
-  const barY = 140;
+  const barY = 168;
   const barX0 = W - M - pillW;
   const barTotalW = pillW;
   const barH = 18;
