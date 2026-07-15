@@ -334,11 +334,53 @@ export function downloadInvoice(data: InvoiceData) {
   doc.setLineWidth(0.5);
   doc.line(tableX, y - 8, tableX + tableW, y - 8);
 
+  // ── HSN / SAC TAX SUMMARY ────────────────────────────────
+  y += 10;
+  if (y + 56 > H - 320) { doc.addPage(); y = M + 20; }
+  doc.setFillColor(245, 245, 248);
+  doc.rect(tableX, y, tableW, 20, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...muted);
+  doc.text("HSN / SAC TAX SUMMARY", tableX + 12, y + 13);
+  y += 20;
+  // Table header
+  const hsnCols = [
+    { l: "HSN/SAC", x: tableX + 12, a: "left" as const },
+    { l: "TAXABLE VALUE", x: tableX + 180, a: "right" as const },
+    { l: "CGST %", x: tableX + 250, a: "right" as const },
+    { l: "CGST AMT", x: tableX + 320, a: "right" as const },
+    { l: "SGST %", x: tableX + 380, a: "right" as const },
+    { l: "SGST AMT", x: tableX + 450, a: "right" as const },
+    { l: "TOTAL TAX", x: tableX + tableW - 12, a: "right" as const },
+  ];
+  doc.setDrawColor(...hair);
+  doc.line(tableX, y, tableX + tableW, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...sub);
+  hsnCols.forEach((c) => doc.text(c.l, c.x, y + 11, { align: c.a }));
+  y += 16;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...ink);
+  doc.text("8518", tableX + 12, y);
+  doc.text(inr(subtotal), tableX + 180, y, { align: "right" });
+  doc.text("9%", tableX + 250, y, { align: "right" });
+  doc.text(inr(cgst), tableX + 320, y, { align: "right" });
+  doc.text("9%", tableX + 380, y, { align: "right" });
+  doc.text(inr(sgst), tableX + 450, y, { align: "right" });
+  doc.setFont("helvetica", "bold");
+  doc.text(inr(cgst + sgst), tableX + tableW - 12, y, { align: "right" });
+  y += 8;
+  doc.setDrawColor(...hair);
+  doc.line(tableX, y, tableX + tableW, y);
 
   // ── TOTALS ───────────────────────────────────────────────
-  y += 14;
+  y += 18;
   const labelX = W - M - 200;
   const valueX = W - M;
+
 
   const row = (label: string, value: string, opts: { bold?: boolean; rule?: boolean } = {}) => {
     if (opts.rule) {
