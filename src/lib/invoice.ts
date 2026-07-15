@@ -132,23 +132,35 @@ export function downloadInvoice(data: InvoiceData) {
   doc.text("INVOICE", W - M, 80, { align: "right" });
   // meta pill
   const pillW = 168;
+  const pillH = 74;
   doc.setFillColor(...tint);
-  doc.roundedRect(W - M - pillW, 90, pillW, 46, 6, 6, "F");
+  doc.roundedRect(W - M - pillW, 90, pillW, pillH, 6, 6, "F");
   doc.setDrawColor(...hair);
-  doc.roundedRect(W - M - pillW, 90, pillW, 46, 6, 6, "S");
+  doc.roundedRect(W - M - pillW, 90, pillW, pillH, 6, 6, "S");
+  // Deterministic IRN / Ack No (e-invoice reference)
+  const irnSeed = Array.from(data.id).reduce((a, c) => (a * 131 + c.charCodeAt(0)) >>> 0, 7);
+  const irn = irnSeed.toString(16).padStart(8, "0") + (irnSeed ^ 0xa5a5a5a5).toString(16).padStart(8, "0");
+  const ackNo = (240000000000 + (irnSeed % 89999999999)).toString();
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   doc.setTextColor(...muted);
   doc.text("INVOICE NO.", W - M - pillW + 10, 102);
-  doc.text("ISSUED", W - M - pillW + 10, 118);
-  doc.text("DUE", W - M - pillW + 10, 132);
+  doc.text("ISSUED", W - M - pillW + 10, 116);
+  doc.text("DUE", W - M - pillW + 10, 130);
+  doc.text("IRN", W - M - pillW + 10, 144);
+  doc.text("ACK NO.", W - M - pillW + 10, 158);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...ink);
   doc.text(`INV-${shortId}`, W - M - 10, 102, { align: "right" });
   doc.setFont("helvetica", "normal");
-  doc.text(dateFmt(created), W - M - 10, 118, { align: "right" });
-  doc.text(dateFmt(due), W - M - 10, 132, { align: "right" });
+  doc.text(dateFmt(created), W - M - 10, 116, { align: "right" });
+  doc.text(dateFmt(due), W - M - 10, 130, { align: "right" });
+  doc.setFont("courier", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...ink);
+  doc.text(irn.slice(0, 16).toUpperCase(), W - M - 10, 144, { align: "right" });
+  doc.text(ackNo, W - M - 10, 158, { align: "right" });
 
   // Pseudo-barcode strip beneath the meta pill (Code128-esque)
   const barY = 140;
