@@ -241,18 +241,18 @@ export function downloadInvoice(data: InvoiceData) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   doc.setTextColor(...muted);
-  doc.text("PLACE OF SUPPLY", M, 252);
-  doc.text("REVERSE CHARGE", M + colW, 252);
-  doc.text("CURRENCY", M + colW * 2, 252);
+  doc.text("PLACE OF SUPPLY", M, 282);
+  doc.text("REVERSE CHARGE", M + colW, 282);
+  doc.text("CURRENCY", M + colW * 2, 282);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(...ink);
-  doc.text(pos, M, 264);
-  doc.text("No", M + colW, 264);
-  doc.text("INR (Indian Rupee)", M + colW * 2, 264);
+  doc.text(pos, M, 294);
+  doc.text("No", M + colW, 294);
+  doc.text("INR (Indian Rupee)", M + colW * 2, 294);
 
   // ── ITEMS TABLE ──────────────────────────────────────────
-  y = 284;
+  y = 314;
   const tableX = M;
   const tableW = W - 2 * M;
   const colHsn = M + 280;
