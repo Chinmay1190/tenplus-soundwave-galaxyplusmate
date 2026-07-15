@@ -18,7 +18,6 @@ export type InvoiceData = {
 const inr = (n: number) =>
   "Rs. " + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// Convert integer rupees to words (Indian numbering)
 function amountInWords(num: number): string {
   const n = Math.round(num);
   if (n === 0) return "Zero Rupees Only";
@@ -55,21 +54,12 @@ const accentDark: [number, number, number] = [170, 20, 36];
 const tint: [number, number, number] = [250, 250, 252];
 const success: [number, number, number] = [16, 128, 74];
 
-// Draws the PULSE waveform mark inside a rounded square.
-function drawLogoMark(
-  doc: jsPDF,
-  x: number,
-  y: number,
-  size: number,
-  onDark = false,
-) {
+function drawLogoMark(doc: jsPDF, x: number, y: number, size: number) {
   const s = size;
-  const strokeCol = onDark ? [255, 255, 255] : accent;
-  const barCol = onDark ? [255, 255, 255] : accent;
-  doc.setDrawColor(strokeCol[0], strokeCol[1], strokeCol[2]);
+  doc.setDrawColor(...accent);
   doc.setLineWidth(Math.max(0.8, s * 0.05));
   doc.roundedRect(x, y, s, s, s * 0.28, s * 0.28, "S");
-  doc.setFillColor(barCol[0], barCol[1], barCol[2]);
+  doc.setFillColor(...accent);
   const heights = [0.28, 0.55, 0.85, 0.55, 0.28];
   const bw = s * 0.09;
   const gap = (s - bw * 5) / 6;
@@ -83,9 +73,9 @@ function drawLogoMark(
 
 export function downloadInvoice(data: InvoiceData) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-  const M = 48; // page margin
+  const W = doc.internal.pageSize.getWidth();   // 595
+  const H = doc.internal.pageSize.getHeight();  // 842
+  const M = 40;
 
   const shortId = data.id.slice(0, 8).toUpperCase();
   const created = new Date(data.createdAt);
@@ -94,139 +84,109 @@ export function downloadInvoice(data: InvoiceData) {
     d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
   // ── HEADER BAND ──────────────────────────────────────────
-  // Layered gradient effect using two rects
   doc.setFillColor(...ink);
-  doc.rect(0, 0, W, 42, "F");
+  doc.rect(0, 0, W, 34, "F");
   doc.setFillColor(30, 30, 34);
-  doc.rect(W / 2, 0, W / 2, 42, "F");
+  doc.rect(W / 2, 0, W / 2, 34, "F");
   doc.setFillColor(...accent);
-  doc.rect(0, 42, W, 2, "F");
+  doc.rect(0, 34, W, 2, "F");
   doc.setFillColor(...accentDark);
-  doc.rect(0, 44, W, 1, "F");
+  doc.rect(0, 36, W, 1, "F");
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
-  doc.text("PULSE · AUDIO LABS · EST. 2021", M, 26);
+  doc.text("PULSE · AUDIO LABS · EST. 2021", M, 22);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(220, 220, 224);
-  doc.text("Experience Sound Beyond Reality · www.pulse.audio", W - M, 26, { align: "right" });
+  doc.text("Experience Sound Beyond Reality · www.pulse.audio", W - M, 22, { align: "right" });
 
-  // Vector logo mark + wordmark
-  drawLogoMark(doc, M, 62, 34);
+  // Logo & wordmark
+  drawLogoMark(doc, M, 50, 28);
   doc.setTextColor(...ink);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(26);
-  doc.text("PULSE", M + 44, 82);
+  doc.setFontSize(22);
+  doc.text("PULSE", M + 36, 70);
   doc.setTextColor(...accent);
-  doc.text(".", M + 44 + doc.getTextWidth("PULSE"), 82);
+  doc.text(".", M + 36 + doc.getTextWidth("PULSE"), 70);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setTextColor(...muted);
-  doc.text("TAX INVOICE  ·  BILL OF SUPPLY", M + 44, 96);
+  doc.text("TAX INVOICE · BILL OF SUPPLY", M + 36, 82);
 
-  // Right side: invoice meta
+  // INVOICE title + meta pill
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(30);
+  doc.setFontSize(22);
   doc.setTextColor(...ink);
-  doc.text("INVOICE", W - M, 80, { align: "right" });
-  // meta pill
-  const pillW = 168;
-  const pillH = 74;
+  doc.text("INVOICE", W - M, 66, { align: "right" });
+
+  const pillW = 200;
+  const pillH = 58;
+  const pillX = W - M - pillW;
+  const pillY = 74;
   doc.setFillColor(...tint);
-  doc.roundedRect(W - M - pillW, 90, pillW, pillH, 6, 6, "F");
+  doc.roundedRect(pillX, pillY, pillW, pillH, 5, 5, "F");
   doc.setDrawColor(...hair);
-  doc.roundedRect(W - M - pillW, 90, pillW, pillH, 6, 6, "S");
-  // Deterministic IRN / Ack No (e-invoice reference)
+  doc.roundedRect(pillX, pillY, pillW, pillH, 5, 5, "S");
+
   const irnSeed = Array.from(data.id).reduce((a, c) => (a * 131 + c.charCodeAt(0)) >>> 0, 7);
   const irn = irnSeed.toString(16).padStart(8, "0") + (irnSeed ^ 0xa5a5a5a5).toString(16).padStart(8, "0");
   const ackNo = (240000000000 + (irnSeed % 89999999999)).toString();
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
-  doc.setTextColor(...muted);
-  doc.text("INVOICE NO.", W - M - pillW + 10, 102);
-  doc.text("ISSUED", W - M - pillW + 10, 116);
-  doc.text("DUE", W - M - pillW + 10, 130);
-  doc.text("IRN", W - M - pillW + 10, 144);
-  doc.text("ACK NO.", W - M - pillW + 10, 158);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(...ink);
-  doc.text(`INV-${shortId}`, W - M - 10, 102, { align: "right" });
-  doc.setFont("helvetica", "normal");
-  doc.text(dateFmt(created), W - M - 10, 116, { align: "right" });
-  doc.text(dateFmt(due), W - M - 10, 130, { align: "right" });
-  doc.setFont("courier", "bold");
-  doc.setFontSize(7);
-  doc.setTextColor(...ink);
-  doc.text(irn.slice(0, 16).toUpperCase(), W - M - 10, 144, { align: "right" });
-  doc.text(ackNo, W - M - 10, 158, { align: "right" });
 
-  // Pseudo-barcode strip beneath the meta pill (Code128-esque)
-  const barY = 168;
-  const barX0 = W - M - pillW;
-  const barTotalW = pillW;
-  const barH = 18;
-  const barSeed = Array.from(data.id).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
-  doc.setFillColor(255, 255, 255);
-  doc.rect(barX0, barY, barTotalW, barH, "F");
-  let bx = barX0 + 2;
-  let r = barSeed;
-  while (bx < barX0 + barTotalW - 2) {
-    r = (r * 1103515245 + 12345) >>> 0;
-    const w = 1 + (r % 3);
-    if ((r >> 4) & 1) {
-      doc.setFillColor(...ink);
-      doc.rect(bx, barY, w, barH - 6, "F");
+  const metaRows: [string, string, "normal" | "mono"][] = [
+    ["INVOICE NO.", `INV-${shortId}`, "normal"],
+    ["ISSUED", dateFmt(created), "normal"],
+    ["DUE", dateFmt(due), "normal"],
+    ["IRN", irn.slice(0, 16).toUpperCase(), "mono"],
+    ["ACK NO.", ackNo, "mono"],
+  ];
+  metaRows.forEach(([k, v, style], i) => {
+    const ry = pillY + 11 + i * 10;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...muted);
+    doc.text(k, pillX + 8, ry);
+    if (style === "mono") {
+      doc.setFont("courier", "bold");
+      doc.setFontSize(7);
+    } else {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
     }
-    bx += w + 0.6;
-  }
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(6.5);
-  doc.setTextColor(...muted);
-  doc.text(`*INV-${shortId}*`, barX0 + barTotalW / 2, barY + barH - 1, { align: "center" });
-
-  // Hairline rule
-  doc.setDrawColor(...hair);
-  doc.setLineWidth(0.6);
-  doc.line(M, 194, W - M, 194);
+    doc.setTextColor(...ink);
+    doc.text(v, pillX + pillW - 8, ry, { align: "right" });
+  });
 
   // ── PARTIES ──────────────────────────────────────────────
-  let y = 200;
+  let y = 148;
+  doc.setDrawColor(...hair);
+  doc.setLineWidth(0.5);
+  doc.line(M, y - 8, W - M, y - 8);
+
   const colW = (W - 2 * M) / 3;
 
-  const labelStyle = () => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...muted);
-  };
-  const bodyStyle = () => {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(...ink);
-  };
-
-  labelStyle();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
   doc.text("FROM", M, y);
   doc.text("BILLED TO", M + colW, y);
   doc.text("SHIPPED TO", M + colW * 2, y);
 
-  bodyStyle();
-  const fromLines = [
-    "PULSE Audio Pvt. Ltd.",
-    "12, Innovation Park",
-    "Bengaluru, KA 560001",
-    "GSTIN: 29ABCDE1234F1Z5",
-    "support@pulse.audio",
-  ];
-  fromLines.forEach((l, i) => doc.text(l, M, y + 16 + i * 13));
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...ink);
 
   const addr = (data.shippingAddress || {}) as Record<string, string>;
   const customerName = data.customer?.name || (addr.name as string) || "Valued Customer";
   const customerEmail = data.customer?.email || "";
-  const billLines = [customerName, customerEmail].filter(Boolean) as string[];
-  billLines.forEach((l, i) => doc.text(l, M + colW, y + 16 + i * 13));
+  const pos = (addr.state as string) || "Karnataka";
 
+  const fromLines = [
+    "PULSE Audio Pvt. Ltd.",
+    "12 Innovation Park, Bengaluru, KA 560001",
+    "GSTIN: 29ABCDE1234F1Z5  ·  support@pulse.audio",
+  ];
+  const billLines = [customerName, customerEmail].filter(Boolean) as string[];
   const shipLines = [
     addr.name as string,
     addr.line1 as string,
@@ -234,207 +194,199 @@ export function downloadInvoice(data: InvoiceData) {
     addr.phone ? `Tel: ${addr.phone}` : "",
   ].filter(Boolean) as string[];
   if (shipLines.length === 0) shipLines.push("Same as billing");
-  shipLines.forEach((l, i) => doc.text(l, M + colW * 2, y + 16 + i * 13));
+
+  const write = (lines: string[], x: number, maxW: number) => {
+    lines.forEach((l, i) => {
+      const wrapped = doc.splitTextToSize(l, maxW) as string[];
+      wrapped.slice(0, 2).forEach((w, j) => doc.text(w, x, y + 12 + i * 11 + j * 10));
+    });
+  };
+  write(fromLines, M, colW - 8);
+  write(billLines, M + colW, colW - 8);
+  write(shipLines, M + colW * 2, colW - 8);
 
   // Place of supply row
-  const pos = (addr.state as string) || "Karnataka";
+  y = 208;
+  doc.setFillColor(...tint);
+  doc.rect(M, y, W - 2 * M, 20, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
+  doc.setFontSize(6.5);
   doc.setTextColor(...muted);
-  doc.text("PLACE OF SUPPLY", M, 282);
-  doc.text("REVERSE CHARGE", M + colW, 282);
-  doc.text("CURRENCY", M + colW * 2, 282);
+  doc.text("PLACE OF SUPPLY", M + 8, y + 8);
+  doc.text("REVERSE CHARGE", M + colW, y + 8);
+  doc.text("CURRENCY", M + colW * 2, y + 8);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(...ink);
-  doc.text(pos, M, 294);
-  doc.text("No", M + colW, 294);
-  doc.text("INR (Indian Rupee)", M + colW * 2, 294);
+  doc.text(pos, M + 8, y + 17);
+  doc.text("No", M + colW, y + 17);
+  doc.text("INR (Indian Rupee)", M + colW * 2, y + 17);
 
   // ── ITEMS TABLE ──────────────────────────────────────────
-  y = 314;
+  y = 238;
   const tableX = M;
   const tableW = W - 2 * M;
-  const colHsn = M + 280;
-  const colQty = M + 340;
-  const colUnit = M + 410;
+  const colHsn = M + 260;
+  const colQty = M + 320;
+  const colUnit = M + 390;
   const colAmt = W - M;
 
-  // Header band
   doc.setFillColor(...ink);
-  doc.rect(tableX, y, tableW, 26, "F");
+  doc.rect(tableX, y, tableW, 20, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8.5);
-  doc.text("DESCRIPTION", tableX + 12, y + 17);
-  doc.text("HSN", colHsn, y + 17);
-  doc.text("QTY", colQty, y + 17, { align: "right" });
-  doc.text("UNIT PRICE", colUnit, y + 17, { align: "right" });
-  doc.text("AMOUNT", colAmt - 12, y + 17, { align: "right" });
+  doc.setFontSize(8);
+  doc.text("DESCRIPTION", tableX + 10, y + 13);
+  doc.text("HSN", colHsn, y + 13);
+  doc.text("QTY", colQty, y + 13, { align: "right" });
+  doc.text("UNIT PRICE", colUnit, y + 13, { align: "right" });
+  doc.text("AMOUNT", colAmt - 10, y + 13, { align: "right" });
 
-  y += 36;
+  y += 26;
 
-  // Compute totals
   const explicitSubtotal = data.subtotal && data.subtotal > 0 ? data.subtotal : 0;
-  const itemsTotal = data.items.reduce(
-    (sum, it) => sum + (it.price ?? 0) * it.qty,
-    0,
-  );
+  const itemsTotal = data.items.reduce((sum, it) => sum + (it.price ?? 0) * it.qty, 0);
   const subtotal = explicitSubtotal || itemsTotal || data.total / 1.18;
   const tax = data.tax ?? Math.max(0, data.total - subtotal - (data.shipping ?? 0));
   const cgst = tax / 2;
   const sgst = tax / 2;
   const shipFee = data.shipping ?? 0;
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
+  // Budget: table body max ~130pt. Cap displayed items to keep it single-page.
+  const MAX_ROWS = 6;
+  const displayItems = data.items.slice(0, MAX_ROWS);
+  const hiddenCount = data.items.length - displayItems.length;
 
-  data.items.forEach((it, idx) => {
+  displayItems.forEach((it, idx) => {
     const unit = it.price ?? subtotal / Math.max(1, data.items.reduce((a, b) => a + b.qty, 0));
     const amt = unit * it.qty;
-
-    const nameLines = doc.splitTextToSize(it.name, 260) as string[];
-    const rowH = Math.max(24, 14 + nameLines.length * 12);
-
-    // Page-break guard so long orders don't crash into the footer/totals
-    if (y + rowH > H - 320) {
-      doc.addPage();
-      y = M + 20;
-      doc.setFillColor(...ink);
-      doc.rect(tableX, y - 20, tableW, 26, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
-      doc.text("DESCRIPTION (contd.)", tableX + 12, y - 3);
-      doc.text("AMOUNT", colAmt - 12, y - 3, { align: "right" });
-      y += 16;
-    }
+    const nameLines = (doc.splitTextToSize(it.name, 245) as string[]).slice(0, 2);
+    const rowH = Math.max(18, 10 + nameLines.length * 10);
 
     if (idx % 2 === 1) {
       doc.setFillColor(...tint);
-      doc.rect(tableX, y - 14, tableW, rowH, "F");
+      doc.rect(tableX, y - 10, tableW, rowH, "F");
     }
     doc.setTextColor(...ink);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    nameLines.forEach((ln, li) => doc.text(ln, tableX + 12, y + li * 12));
-    doc.setTextColor(...sub);
     doc.setFontSize(9);
+    nameLines.forEach((ln, li) => doc.text(ln, tableX + 10, y + li * 10));
+    doc.setTextColor(...sub);
+    doc.setFontSize(8);
     doc.text("8518", colHsn, y);
     doc.text(String(it.qty), colQty, y, { align: "right" });
     doc.text(inr(unit), colUnit, y, { align: "right" });
     doc.setTextColor(...ink);
-    doc.setFontSize(10);
-    doc.text(inr(amt), colAmt - 12, y, { align: "right" });
+    doc.setFontSize(9);
+    doc.text(inr(amt), colAmt - 10, y, { align: "right" });
     y += rowH;
   });
 
-  // hairline under last row
+  if (hiddenCount > 0) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(...muted);
+    doc.text(`… and ${hiddenCount} more item(s) — see order confirmation email.`, tableX + 10, y);
+    y += 12;
+  }
+
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.5);
-  doc.line(tableX, y - 8, tableX + tableW, y - 8);
+  doc.line(tableX, y - 6, tableX + tableW, y - 6);
 
-  // ── HSN / SAC TAX SUMMARY ────────────────────────────────
-  y += 10;
-  if (y + 56 > H - 320) { doc.addPage(); y = M + 20; }
+  // ── HSN TAX SUMMARY (compact 1-row) ──────────────────────
+  y += 6;
   doc.setFillColor(245, 245, 248);
-  doc.rect(tableX, y, tableW, 20, "F");
+  doc.rect(tableX, y, tableW, 32, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.5);
   doc.setTextColor(...muted);
-  doc.text("HSN / SAC TAX SUMMARY", tableX + 12, y + 13);
-  y += 20;
-  // Table header
-  const hsnCols = [
-    { l: "HSN/SAC", x: tableX + 12, a: "left" as const },
-    { l: "TAXABLE VALUE", x: tableX + 180, a: "right" as const },
-    { l: "CGST %", x: tableX + 250, a: "right" as const },
-    { l: "CGST AMT", x: tableX + 320, a: "right" as const },
-    { l: "SGST %", x: tableX + 380, a: "right" as const },
-    { l: "SGST AMT", x: tableX + 450, a: "right" as const },
-    { l: "TOTAL TAX", x: tableX + tableW - 12, a: "right" as const },
+  const hsnHeaders: [string, number, "left" | "right"][] = [
+    ["HSN/SAC", tableX + 10, "left"],
+    ["TAXABLE VALUE", tableX + 170, "right"],
+    ["CGST %", tableX + 230, "right"],
+    ["CGST AMT", tableX + 300, "right"],
+    ["SGST %", tableX + 360, "right"],
+    ["SGST AMT", tableX + 430, "right"],
+    ["TOTAL TAX", tableX + tableW - 10, "right"],
   ];
-  doc.setDrawColor(...hair);
-  doc.line(tableX, y, tableX + tableW, y);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...sub);
-  hsnCols.forEach((c) => doc.text(c.l, c.x, y + 11, { align: c.a }));
-  y += 16;
+  hsnHeaders.forEach(([l, x, a]) => doc.text(l, x, y + 10, { align: a }));
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...ink);
+  doc.text("8518", tableX + 10, y + 24);
+  doc.text(inr(subtotal), tableX + 170, y + 24, { align: "right" });
+  doc.text("9%", tableX + 230, y + 24, { align: "right" });
+  doc.text(inr(cgst), tableX + 300, y + 24, { align: "right" });
+  doc.text("9%", tableX + 360, y + 24, { align: "right" });
+  doc.text(inr(sgst), tableX + 430, y + 24, { align: "right" });
+  doc.setFont("helvetica", "bold");
+  doc.text(inr(cgst + sgst), tableX + tableW - 10, y + 24, { align: "right" });
+  y += 40;
+
+  // ── TOTALS + AMOUNT IN WORDS (side-by-side) ─────────────
+  const totalsX = W - M - 200;
+  const wordsW = totalsX - M - 12;
+
+  // Amount in words card (left)
+  doc.setFillColor(...tint);
+  doc.rect(M, y, wordsW, 86, "F");
+  doc.setDrawColor(...hair);
+  doc.rect(M, y, wordsW, 86, "S");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text("AMOUNT IN WORDS", M + 10, y + 12);
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...ink);
-  doc.text("8518", tableX + 12, y);
-  doc.text(inr(subtotal), tableX + 180, y, { align: "right" });
-  doc.text("9%", tableX + 250, y, { align: "right" });
-  doc.text(inr(cgst), tableX + 320, y, { align: "right" });
-  doc.text("9%", tableX + 380, y, { align: "right" });
-  doc.text(inr(sgst), tableX + 450, y, { align: "right" });
+  const wordsLines = doc.splitTextToSize(amountInWords(data.total), wordsW - 20) as string[];
+  wordsLines.slice(0, 3).forEach((l, i) => doc.text(l, M + 10, y + 26 + i * 11));
+
   doc.setFont("helvetica", "bold");
-  doc.text(inr(cgst + sgst), tableX + tableW - 12, y, { align: "right" });
-  y += 8;
-  doc.setDrawColor(...hair);
-  doc.line(tableX, y, tableX + tableW, y);
+  doc.setFontSize(7);
+  doc.setTextColor(...accent);
+  doc.text("INCLUDED WITH YOUR ORDER", M + 10, y + 66);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...sub);
+  doc.text("2-yr warranty  ·  30-day returns  ·  Free replacement (10d)  ·  1800-PULSE-IN", M + 10, y + 78);
 
-  // ── TOTALS ───────────────────────────────────────────────
-  y += 18;
-  const labelX = W - M - 200;
-  const valueX = W - M;
-
-
-  const row = (label: string, value: string, opts: { bold?: boolean; rule?: boolean } = {}) => {
+  // Totals column (right)
+  let ty = y + 10;
+  const totRow = (label: string, value: string, opts: { bold?: boolean; rule?: boolean } = {}) => {
     if (opts.rule) {
       doc.setDrawColor(...ink);
       doc.setLineWidth(0.8);
-      doc.line(labelX, y - 10, valueX, y - 10);
+      doc.line(totalsX, ty - 6, W - M, ty - 6);
     }
     doc.setFont("helvetica", opts.bold ? "bold" : "normal");
-    doc.setFontSize(opts.bold ? 12 : 10);
+    doc.setFontSize(opts.bold ? 11 : 9);
     doc.setTextColor(...(opts.bold ? ink : sub));
-    doc.text(label, labelX, y);
+    doc.text(label, totalsX, ty);
     doc.setTextColor(...ink);
-    doc.text(value, valueX, y, { align: "right" });
-    y += opts.bold ? 22 : 16;
+    doc.text(value, W - M, ty, { align: "right" });
+    ty += opts.bold ? 18 : 13;
   };
+  totRow("Subtotal", inr(subtotal));
+  totRow("CGST (9%)", inr(cgst));
+  totRow("SGST (9%)", inr(sgst));
+  totRow("Shipping", shipFee === 0 ? "FREE" : inr(shipFee));
+  totRow("Total (INR)", inr(data.total), { bold: true, rule: true });
 
-  row("Subtotal", inr(subtotal));
-  row("CGST (9%)", inr(cgst));
-  row("SGST (9%)", inr(sgst));
-  row("Shipping", shipFee === 0 ? "FREE" : inr(shipFee));
-  row("Total (INR)", inr(data.total), { bold: true, rule: true });
-
-  // Amount in words
-  doc.setFillColor(...tint);
-  doc.rect(M, y, W - 2 * M, 26, "F");
-  doc.setDrawColor(...hair);
-  doc.rect(M, y, W - 2 * M, 26, "S");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...muted);
-  doc.text("AMOUNT IN WORDS", M + 12, y + 11);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9.5);
-  doc.setTextColor(...ink);
-  doc.text(amountInWords(data.total), M + 12, y + 22);
-  y += 34;
-
-  // Page-break guard before payment summary block
-  if (y + 220 > H - 60) {
-    doc.addPage();
-    y = M + 20;
-  }
+  y += 96;
 
   // ── PAYMENT SUMMARY ──────────────────────────────────────
   const isPaid =
     (data.paymentMethod || "").toLowerCase() !== "cod" &&
     (data.status || "confirmed").toLowerCase() !== "pending";
+
   doc.setFillColor(...tint);
-  doc.rect(M, y, W - 2 * M, 64, "F");
-
+  doc.rect(M, y, W - 2 * M, 46, "F");
   doc.setDrawColor(...hair);
-  doc.rect(M, y, W - 2 * M, 64, "S");
+  doc.rect(M, y, W - 2 * M, 46, "S");
 
-  const blockW = (W - 2 * M) / 4;
+  const blockW = (W - 2 * M - 80) / 4;
   const blocks: [string, string][] = [
     ["ORDER ID", `#${shortId}`],
     ["STATUS", (data.status || "confirmed").replace(/_/g, " ").toUpperCase()],
@@ -442,148 +394,109 @@ export function downloadInvoice(data: InvoiceData) {
     [isPaid ? "AMOUNT PAID" : "AMOUNT DUE", inr(data.total)],
   ];
   blocks.forEach(([k, v], i) => {
-    const bx = M + i * blockW + 14;
+    const bx = M + i * blockW + 10;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
+    doc.setFontSize(6.5);
     doc.setTextColor(...muted);
-    doc.text(k, bx, y + 22);
+    doc.text(k, bx, y + 14);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setTextColor(...ink);
-    doc.text(v, bx, y + 44);
+    doc.text(v, bx, y + 32);
   });
 
-  // PAID / COD stamp — rotated
-  const stampX = W - M - 60;
+  // PAID / DUE stamp
+  const stampX = W - M - 66;
   const stampY = y + 8;
   const stampCol = isPaid ? success : accent;
   doc.setDrawColor(...stampCol);
-  doc.setLineWidth(1.8);
+  doc.setLineWidth(1.5);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
+  doc.setFontSize(16);
   doc.setTextColor(...stampCol);
-  const label = isPaid ? "PAID" : "DUE";
-  // faux rotated stamp: draw double border + label
-  doc.roundedRect(stampX - 4, stampY - 4, 68, 40, 4, 4, "S");
-  doc.setLineWidth(0.6);
-  doc.roundedRect(stampX - 1, stampY - 1, 62, 34, 3, 3, "S");
-  doc.text(label, stampX + 30, stampY + 22, { align: "center" });
+  const stampLabel = isPaid ? "PAID" : "DUE";
+  doc.roundedRect(stampX, stampY, 56, 30, 3, 3, "S");
+  doc.setLineWidth(0.5);
+  doc.roundedRect(stampX + 2, stampY + 2, 52, 26, 2, 2, "S");
+  doc.text(stampLabel, stampX + 28, stampY + 20, { align: "center" });
 
-  // Accent strip
   doc.setFillColor(...accent);
-  doc.rect(M, y + 60, W - 2 * M, 4, "F");
+  doc.rect(M, y + 44, W - 2 * M, 2, "F");
+  y += 54;
 
-  // ── TRANSACTION REFERENCE STRIP ──────────────────────────
-  y += 72;
-  // Deterministic txn ref from order id
+  // ── TXN REF STRIP ────────────────────────────────────────
   const txnHash = Array.from(data.id).reduce((a, c) => (a * 33 + c.charCodeAt(0)) >>> 0, 5381);
   const txnRef = "TXN" + txnHash.toString(36).toUpperCase().padStart(10, "0").slice(0, 10);
   const utrRef = "UTR" + ((txnHash ^ 0x9e3779b9) >>> 0).toString().padStart(12, "0").slice(0, 12);
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(...hair);
-  doc.rect(M, y, W - 2 * M, 30, "FD");
+  doc.rect(M, y, W - 2 * M, 22, "FD");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
+  doc.setFontSize(6.5);
   doc.setTextColor(...muted);
-  doc.text("TXN REF", M + 12, y + 12);
-  doc.text("UTR / BANK REF", M + 180, y + 12);
-  doc.text("SETTLED ON", M + 360, y + 12);
+  doc.text("TXN REF", M + 8, y + 9);
+  doc.text("UTR / BANK REF", M + 180, y + 9);
+  doc.text("SETTLED ON", M + 360, y + 9);
   doc.setFont("courier", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(8.5);
   doc.setTextColor(...ink);
-  doc.text(txnRef, M + 12, y + 24);
-  doc.text(utrRef, M + 180, y + 24);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.text(dateFmt(created), M + 360, y + 24);
-
-  // ── PAYMENT INSTRUCTIONS (only when DUE) ─────────────────
-  y += 42;
-  if (!isPaid) {
-    if (y + 70 > H - 60) { doc.addPage(); y = M + 20; }
-    doc.setFillColor(255, 248, 240);
-    doc.setDrawColor(...accent);
-    doc.setLineWidth(0.6);
-    doc.rect(M, y, W - 2 * M, 62, "FD");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(...accent);
-    doc.text("PAYMENT INSTRUCTIONS · PLEASE SETTLE BY " + dateFmt(due).toUpperCase(), M + 12, y + 14);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...ink);
-    doc.text("Bank: HDFC Bank  ·  A/C: PULSE Audio Pvt. Ltd.  ·  A/C No: 5010 0234 5678 90", M + 12, y + 30);
-    doc.text("IFSC: HDFC0001234  ·  Branch: MG Road, Bengaluru", M + 12, y + 44);
-    doc.setFont("courier", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...accentDark);
-    doc.text(`UPI: pulse@hdfcbank  ·  Ref: INV-${shortId}`, W - M - 12, y + 44, { align: "right" });
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...muted);
-    doc.text("Quote the invoice number as UPI/NEFT reference for auto-reconciliation.", W - M - 12, y + 30, { align: "right" });
-    y += 74;
-  }
-
-  // ── VALUE-ADD BENEFITS BAR ───────────────────────────────
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...accent);
-  doc.text("INCLUDED WITH YOUR ORDER", M, y);
+  doc.text(txnRef, M + 8, y + 18);
+  doc.text(utrRef, M + 180, y + 18);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.setTextColor(...sub);
-  const perks = [
-    "✓  2-year manufacturer warranty",
-    "✓  30-day no-questions returns",
-    "✓  Free doorstep replacement in first 10 days",
-    "✓  Priority customer care · 1800-PULSE-IN",
-  ];
-  perks.forEach((p, i) => {
-    const col = i % 2;
-    const rowIdx = Math.floor(i / 2);
-    doc.text(p, M + col * ((W - 2 * M) / 2), y + 14 + rowIdx * 12);
-  });
+  doc.text(dateFmt(created), M + 360, y + 18);
+  y += 28;
 
-
-  // ── TERMS & SIGNATURE ────────────────────────────────────
-  y += 46;
-  if (y + 120 > H - 60) {
-    doc.addPage();
-    y = M + 20;
+  // Payment instructions when DUE (compact)
+  if (!isPaid) {
+    doc.setFillColor(255, 248, 240);
+    doc.setDrawColor(...accent);
+    doc.setLineWidth(0.5);
+    doc.rect(M, y, W - 2 * M, 32, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...accent);
+    doc.text("PAYMENT INSTRUCTIONS · SETTLE BY " + dateFmt(due).toUpperCase(), M + 8, y + 10);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...ink);
+    doc.text("HDFC Bank · A/C 5010 0234 5678 90 · IFSC HDFC0001234", M + 8, y + 22);
+    doc.setFont("courier", "bold");
+    doc.setTextColor(...accentDark);
+    doc.text(`UPI: pulse@hdfcbank · Ref INV-${shortId}`, W - M - 8, y + 22, { align: "right" });
+    y += 38;
   }
 
+  // ── TERMS + SIGNATURE / QR ───────────────────────────────
+  const bottomY = H - 78; // reserve for footer
+  y = Math.min(y + 4, bottomY - 86);
+
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(...ink);
   doc.text("TERMS & CONDITIONS", M, y);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(...sub);
   const terms = [
-    "1. Returns accepted within 30 days of delivery in original, unopened condition with all accessories.",
-    "2. Warranty: 2 years on all PULSE audio products against manufacturing defects (accidental damage excluded).",
-    "3. Prices are inclusive of all taxes. CGST + SGST as applicable under GST Act, 2017.",
-    "4. Any dispute is subject to the exclusive jurisdiction of courts in Bengaluru, Karnataka.",
-    "5. This is a computer-generated invoice; a digital signature is affixed in lieu of a physical one. E. & O. E.",
+    "1. Returns within 30 days in original, unopened condition with accessories.",
+    "2. 2-year warranty on manufacturing defects (accidental damage excluded).",
+    "3. Prices inclusive of GST (CGST + SGST) as per GST Act, 2017.",
+    "4. Disputes subject to exclusive jurisdiction of courts in Bengaluru.",
+    "5. Computer-generated invoice; digitally signed. E. & O. E.",
   ];
-  terms.forEach((t, i) => doc.text(t, M, y + 14 + i * 11));
+  terms.forEach((t, i) => doc.text(t, M, y + 10 + i * 9));
 
-  // Signature + QR verification block
-  const sigX = W - M - 160;
-  const sigY = y + 6;
-
-  // Pseudo-QR (deterministic from order id) — visual "scan to verify"
-  const qrSize = 54;
-  const qrX = sigX;
-  const qrY = sigY - 4;
+  // QR + signature (right side)
+  const qrSize = 46;
+  const qrX = W - M - qrSize - 132;
+  const qrY = y - 2;
   const grid = 11;
   const cell = qrSize / grid;
   doc.setFillColor(255, 255, 255);
   doc.rect(qrX, qrY, qrSize, qrSize, "F");
   doc.setDrawColor(...hair);
   doc.rect(qrX, qrY, qrSize, qrSize, "S");
-  // Finder-style corners
   doc.setFillColor(...ink);
   const finder = (fx: number, fy: number) => {
     doc.rect(fx, fy, cell * 3, cell * 3, "F");
@@ -595,88 +508,69 @@ export function downloadInvoice(data: InvoiceData) {
   finder(qrX, qrY);
   finder(qrX + qrSize - cell * 3, qrY);
   finder(qrX, qrY + qrSize - cell * 3);
-  // Data modules — deterministic from id hash
   let seed = Array.from(data.id).reduce((a, c) => (a * 1103515245 + c.charCodeAt(0)) >>> 0, 1);
-  const rnd = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 0xffffffff;
-  };
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0xffffffff; };
   for (let gx = 0; gx < grid; gx++) {
     for (let gy = 0; gy < grid; gy++) {
-      const inFinder =
-        (gx < 3 && gy < 3) ||
-        (gx > grid - 4 && gy < 3) ||
-        (gx < 3 && gy > grid - 4);
+      const inFinder = (gx < 3 && gy < 3) || (gx > grid - 4 && gy < 3) || (gx < 3 && gy > grid - 4);
       if (inFinder) continue;
-      if (rnd() > 0.52) {
-        doc.rect(qrX + gx * cell, qrY + gy * cell, cell, cell, "F");
-      }
+      if (rnd() > 0.52) doc.rect(qrX + gx * cell, qrY + gy * cell, cell, cell, "F");
     }
   }
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(6.5);
+  doc.setFontSize(6);
   doc.setTextColor(...muted);
-  doc.text("SCAN TO VERIFY", qrX + qrSize / 2, qrY + qrSize + 8, { align: "center" });
+  doc.text("SCAN TO VERIFY", qrX + qrSize / 2, qrY + qrSize + 7, { align: "center" });
 
-  // Signature line + text (offset right of QR)
-  const sTextX = sigX + qrSize + 12;
+  // Signature block
+  const sigX = qrX + qrSize + 14;
+  const sigW = W - M - sigX;
   doc.setDrawColor(...hair);
   doc.setLineWidth(0.5);
-  doc.line(sTextX, sigY + 44, W - M, sigY + 44);
+  doc.line(sigX, qrY + 32, sigX + sigW, qrY + 32);
   doc.setFont("helvetica", "italic");
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.setTextColor(...accent);
-  doc.text("PULSE", (sTextX + W - M) / 2, sigY + 38, { align: "center" });
+  doc.text("PULSE", sigX + sigW / 2, qrY + 26, { align: "center" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
+  doc.setFontSize(6.5);
   doc.setTextColor(...muted);
-  doc.text("For PULSE Audio Pvt. Ltd.", (sTextX + W - M) / 2, sigY + 56, { align: "center" });
-  doc.text("Authorised Signatory · Digitally signed", (sTextX + W - M) / 2, sigY + 66, {
-    align: "center",
-  });
+  doc.text("For PULSE Audio Pvt. Ltd.", sigX + sigW / 2, qrY + 42, { align: "center" });
+  doc.text("Authorised Signatory · Digitally signed", sigX + sigW / 2, qrY + 51, { align: "center" });
 
+  // ── FOOTER (watermark + fine print) ──────────────────────
+  // Diagonal watermark
+  doc.saveGraphicsState?.();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(90);
+  const GS = (doc as unknown as { GState?: new (o: { opacity: number }) => unknown; setGState?: (s: unknown) => void });
+  if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 0.04 }));
+  doc.setTextColor(...ink);
+  doc.text("PULSE", W / 2, H / 2, { align: "center", angle: -28 });
+  if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 1 }));
+  doc.restoreGraphicsState?.();
 
-  // ── FOOTER (with page numbers + watermark) ───────────────
-  const pageCount = doc.getNumberOfPages();
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p);
-
-    // Diagonal watermark
-    doc.saveGraphicsState?.();
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(90);
-    const GS = (doc as unknown as { GState?: new (o: { opacity: number }) => unknown; setGState?: (s: unknown) => void });
-    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 0.04 }));
-    doc.setTextColor(...ink);
-    doc.text("PULSE", W / 2, H / 2, { align: "center", angle: -28 });
-    if (GS.GState && GS.setGState) GS.setGState(new GS.GState({ opacity: 1 }));
-    doc.restoreGraphicsState?.();
-
-    doc.setDrawColor(...hair);
-    doc.line(M, H - 58, W - M, H - 58);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...ink);
-    doc.text("Thank you for choosing PULSE — where every beat matters.", M, H - 44);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...muted);
-    doc.text(
-      "Support · care@pulse.audio · 1800-PULSE-IN (toll-free)  ·  Track order at pulse.audio/track/" + shortId,
-      M,
-      H - 30,
-    );
-    doc.text(
-      "PULSE Audio Pvt. Ltd. · CIN: U74999KA2021PTC145678 · GSTIN: 29ABCDE1234F1Z5",
-      M,
-      H - 20,
-    );
-    doc.setTextColor(...accent);
-    doc.text("www.pulse.audio", W - M, H - 20, { align: "right" });
-    doc.setTextColor(...muted);
-    doc.text(`Page ${p} of ${pageCount}`, W / 2, H - 20, { align: "center" });
-  }
+  doc.setDrawColor(...hair);
+  doc.line(M, H - 58, W - M, H - 58);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...ink);
+  doc.text("Thank you for choosing PULSE — where every beat matters.", M, H - 44);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...muted);
+  doc.text(
+    "Support · care@pulse.audio · 1800-PULSE-IN · Track at pulse.audio/track/" + shortId,
+    M, H - 32,
+  );
+  doc.text(
+    "PULSE Audio Pvt. Ltd. · CIN U74999KA2021PTC145678 · GSTIN 29ABCDE1234F1Z5",
+    M, H - 22,
+  );
+  doc.setTextColor(...accent);
+  doc.text("www.pulse.audio", W - M, H - 22, { align: "right" });
+  doc.setTextColor(...muted);
+  doc.text("Page 1 of 1", W / 2, H - 22, { align: "center" });
 
   doc.save(`PULSE-Invoice-${shortId}.pdf`);
 }
-
